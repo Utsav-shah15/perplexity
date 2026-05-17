@@ -31,6 +31,16 @@ async function register(req,res){
             password,
         });
 
+        const verifyemailtoken=jwt.sign(
+            {
+                email: user.email,
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d",
+            }
+         );
+
         await sendEmail({
             to: email,
             subject: "Welcome to Perplexity",
@@ -68,7 +78,7 @@ async function register(req,res){
                     </p>
 
                     <a 
-                    href="http://localhost:3000"
+                    href="http://localhost:3000/auth/verify-email?token=${verifyemailtoken}"
                     style="
                         display: inline-block;
                         margin-top: 20px;
@@ -117,6 +127,66 @@ async function register(req,res){
   }
 }
 
+async function verifyemail(req,res){
+    try{
+        const {token}=req.query;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+    const user=await User.findOne({email:decoded.email});
+
+    if(!user){
+        return res.json({
+            message:"Invalid token",
+            success:false,
+            err:"user not found"
+        })
+    }
+
+    user.verified=true;
+
+    await user.save();
+
+    const html = `
+      <div style="font-family: Arial; padding: 40px; text-align: center;">
+
+        <h1 style="color: green;">
+          Email Verified Successfully ✅
+        </h1>
+
+        <p>
+          Your account has been verified successfully.
+        </p>
+
+        <a 
+          href="http://localhost:3000/login"
+          style="
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 20px;
+            background: black;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+          "
+        >
+          Login
+        </a>
+
+      </div>
+    `;
+
+    return res.send(html)
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
 module.exports={
-    register
+    register,
+    verifyemail
 }
