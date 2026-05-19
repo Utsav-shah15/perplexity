@@ -9,10 +9,10 @@ async function register(req,res){
         const { error } = registerValidation.validate(req.body);
 
         if (error) {
-        return res.status(400).json({
-            success: false,
-            message: error.details[0].message,
-        });
+            return res.status(400).json({
+                success: false,
+                message: error.details[0].message,
+            });
         }
 
         const { username, email, password } = req.body;
@@ -144,6 +144,43 @@ async function verifyemail(req,res){
         })
     }
 
+    if (user.verified) {
+        const html = `
+            <div style="
+            font-family: Arial;
+            padding: 40px;
+            text-align: center;
+            ">
+
+            <h1 style="color: orange;">
+                Email Already Verified ⚠️
+            </h1>
+
+            <p>
+                Your email has already been verified.
+            </p>
+
+            <a 
+                href="http://localhost:3000/login"
+                style="
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 20px;
+                background: black;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                "
+            >
+                Login
+            </a>
+
+            </div>
+        `;
+
+         return res.send(html);
+    }
+
     user.verified=true;
 
     await user.save();
@@ -186,7 +223,184 @@ async function verifyemail(req,res){
     }
 }
 
+async function resendVerificationEmail(req, res) {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.verified) {
+        const html = `
+            <div style="
+            font-family: Arial;
+            padding: 40px;
+            text-align: center;
+            ">
+
+            <h1 style="color: orange;">
+                Email Already Verified ⚠️
+            </h1>
+
+            <p>
+                Your email has already been verified.
+            </p>
+
+            <a 
+                href="http://localhost:3000/login"
+                style="
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 20px;
+                background: black;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                "
+            >
+                Login
+            </a>
+
+            </div>
+        `;
+
+         return res.send(html);
+    }
+
+    // Create new token
+    const token = jwt.sign(
+      { email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // Verification URL
+    const verificationUrl =
+      `http://localhost:5000/api/auth/verify-email?token=${token}`;
+
+    // Send Email
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: user.email,
+      subject: "Verify Your Email",
+      html: `
+        <h2>Email Verification</h2>
+
+        <p>
+          Click below to verify your email
+        </p>
+
+        <a href="${verificationUrl}">
+          Verify Email
+        </a>
+      `,
+    });
+
+    return res.json({
+      success: true,
+      message: "Verification email resent successfully",
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+}
+
+async function login(req,res){
+   try{
+      let {email,password}=req.body;
+
+    const user=await User.findOne({email}).select("+password");
+
+    if(!user){
+        return res.status(404).json({
+            success: false,
+            message: "User not found",
+        });
+    }
+
+    const isMatch=await user.comparePassword(password);
+
+    if (!isMatch) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid password",
+        });
+    }
+
+    if(!user.verified){
+      return res.status(400).json({
+        success: false,
+        message: "Please verify your email",
+      });
+    }
+    
+    const token = jwt.sign(
+            {
+                id: user._id,
+                email: user.email,
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d",
+            }
+    );
+
+    res.cookie("token",token);
+
+    res.status(200).json({
+            success: true,
+            message: "User logged in successfully",
+            token,
+            user,
+    });
+   }catch(err){
+        return res.status(500).json({
+            success: false,
+            message: err.message,
+        });
+   }
+}
+
+async function getMe(req, res) {
+
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+  
 module.exports={
     register,
-    verifyemail
+    verifyemail,
+    resendVerificationEmail,
+    login,
+    getMe
 }
