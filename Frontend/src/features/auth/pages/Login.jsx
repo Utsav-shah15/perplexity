@@ -5,10 +5,13 @@ import { Mail, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hook/useAuth";
+import { useSelector } from "react-redux";
 
 export default function Login() {
   const {handleLogin}=useAuth();
   const navigate = useNavigate();
+  const user=useSelector(state=>state.auth.user);
+  const loading=useSelector(state=>state.auth.loading);
 
   const formik = useFormik({
     initialValues: {
@@ -32,6 +35,10 @@ export default function Login() {
       navigate("/")
     },
   });
+
+  if(!loading && user){
+     return naviagate("/")
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
