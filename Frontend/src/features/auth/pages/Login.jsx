@@ -37,7 +37,7 @@ export default function Login() {
   });
 
   if(!loading && user){
-     return naviagate("/")
+     return navigate("/")
   }
 
   return (
