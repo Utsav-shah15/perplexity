@@ -9,20 +9,35 @@ const chatSlice = createSlice({
     isError:false,
   },
   reducers: {
-     setChats:(state,action)=>{
-        state.chats = action.payload;
+     createNewChat:(state,action)=>{
+         const {chatId,title}=action.payload;
+         state.chats[chatId]={
+               _id:chatId,
+               title,
+               messages:[],
+               lastUpdated:Date.now() 
+        }
+        state.currentChatId=chatId;
+    },
+    addNewMessage:(state,action)=>{
+       const {chatId,message}=action.payload;
+       state.chats[chatId].messages.push(message);
+       state.chats[chatId].lastUpdated=Date.now();
+    },
+     setChats: (state, action) => {
+        state.chat=action.payload; 
      },
-     currentChatId:(state,action)=>{
+     setCurrentChatId:(state,action)=>{
         state.currentChatId = action.payload;
      },
-     isLoading:(state,action)=>{
+     setLoading:(state,action)=>{
         state.isLoading = action.payload;
      },
-     isError:(state,action)=>{
+     setIsError:(state,action)=>{
         state.isError = action.payload;
      }
   }
 });
 
-export const { isError, isLoading, currentChatId, setChats } = chatSlice.actions;
+export const { setIsError, setLoading, setCurrentChatId, setChats, createNewChat, addNewMessage } = chatSlice.actions;
 export default chatSlice.reducer;

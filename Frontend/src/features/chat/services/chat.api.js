@@ -9,21 +9,21 @@ const api = axios.create({
 });
 
 export async function sendMessage({message,chatId}){
-    const response=await api.post("/chat/message",{message,chatId});
+    const response=await api.post("/chats/message",{message,chatId});
     return response.data;
 }   
 
 export async function getChats(){
-    const response=await api.get("/chat");
+    const response=await api.get("/chats");
     return response.data;
 }
 
 export async function getMessages({chatId}){
-    const response=await api.get(`/chat/${chatId}/messages`);
+    const response=await api.get(`/chats/${chatId}/messages`);
     return response.data;
 }
 
 export async function deleteChat({chatId}){
-    const response=await api.delete(`/chat/delete/${chatId}`);
+    const response=await api.delete(`/chats/${chatId}`);
     return response.data;
 }

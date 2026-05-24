@@ -130,60 +130,60 @@ async function register(req,res){
 async function verifyemail(req,res){
     try{
         const {token}=req.query;
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
-    const user=await User.findOne({email:decoded.email});
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+        const user=await User.findOne({email:decoded.email});
 
-    if(!user){
-        return res.json({
-            message:"Invalid token",
-            success:false,
-            err:"user not found"
-        })
-    }
+        if(!user){
+            return res.json({
+                message:"Invalid token",
+                success:false,
+                err:"user not found"
+            })
+        }
 
-    if (user.verified) {
-        const html = `
-            <div style="
-            font-family: Arial;
-            padding: 40px;
-            text-align: center;
-            ">
+        if (user.verified) {
+            const html = `
+                <div style="
+                font-family: Arial;
+                padding: 40px;
+                text-align: center;
+                ">
 
-            <h1 style="color: orange;">
-                Email Already Verified ⚠️
-            </h1>
+                <h1 style="color: orange;">
+                    Email Already Verified ⚠️
+                </h1>
 
-            <p>
-                Your email has already been verified.
-            </p>
+                <p>
+                    Your email has already been verified.
+                </p>
 
-            <a 
-                href="http://localhost:3000/login"
-                style="
-                display: inline-block;
-                margin-top: 20px;
-                padding: 12px 20px;
-                background: black;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                "
-            >
-                Login
-            </a>
+                <a 
+                    href="http://localhost:3000/login"
+                    style="
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 12px 20px;
+                    background: black;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    "
+                >
+                    Login
+                </a>
 
-            </div>
-        `;
+                </div>
+            `;
 
-         return res.send(html);
-    }
+            return res.send(html);
+        }
 
-    user.verified=true;
+        user.verified=true;
 
-    await user.save();
+        await user.save();
 
     const html = `
       <div style="font-family: Arial; padding: 40px; text-align: center;">

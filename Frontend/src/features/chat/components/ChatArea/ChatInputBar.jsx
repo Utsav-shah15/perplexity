@@ -6,7 +6,7 @@ export default function ChatInputBar({ onsend }) {
 
   const handleMessage = () => {
     if (input.trim() === "") return;
-    onsend({ message: input, chatId: "temp-id" });
+    onsend({ message: input});
     setInput("");
   }
 

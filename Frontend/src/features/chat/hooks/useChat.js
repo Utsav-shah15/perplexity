@@ -1,30 +1,24 @@
 import { initializeSocketConnection } from "../services/chat.socket";
 import { sendMessage,getChats,getMessages,deleteChat} from "../services/chat.api";
 import { useDispatch } from "react-redux";
-import { setChats,currentChatId,isError,isLoading } from "../chat.slice";
+import { setChats,setCurrentChatId,setIsError,setLoading,createNewChat,addNewMessage } from "../chat.slice";
 
 export const useChat=()=>{
     const dispatch = useDispatch();
 
     async function handlechatMessage({message,chatId}){
         try{
-            dispatch(isLoading(true));
+            dispatch(setLoading(true));
             const data=await sendMessage({message,chatId});
-            const {chat,aimessage,title}=data;
-            dispatch(setChats((prev)=>{
-                return {
-                    ...prev,
-                    [chat._id || chatId]:{
-                        ...chat,
-                        messages:[{content:message,role:"user"},aimessage]
-                    }
-                }
-            }))
-            dispatch(currentChatId(chat?._id || chatId));
+            const {chat,aimessage,usermessage,title}=data;
+            dispatch(createNewChat({chatId:chat._id,title}));
+            dispatch(setCurrentChatId(chat?._id || chatId));
+            dispatch(addNewMessage({chatId:chat._id,message:usermessage}));
+            dispatch(addNewMessage({chatId:chat._id,message:aimessage}));
         }catch(error){
-            dispatch(isError(true));
+            dispatch(setIsError(true));
         }finally{
-            dispatch(isLoading(false));
+            dispatch(setLoading(false));
         }   
     }
 
