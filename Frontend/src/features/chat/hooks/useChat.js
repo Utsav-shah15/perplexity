@@ -1,7 +1,7 @@
 import { initializeSocketConnection } from "../services/chat.socket";
 import { sendMessage,getChats,getMessages,deleteChat} from "../services/chat.api";
 import { useDispatch } from "react-redux";
-import { setChats,setCurrentChatId,setIsError,setLoading,createNewChat,addNewMessage } from "../chat.slice";
+import { setChats,setCurrentChatId,setIsError,setLoading,createNewChat,addNewMessage,setMessages } from "../chat.slice";
 
 export const useChat=()=>{
     const dispatch = useDispatch();
@@ -22,8 +22,45 @@ export const useChat=()=>{
         }   
     }
 
+    async function handleGetChats(){
+        try{
+            dispatch(setLoading(true));
+            const data=await getChats();
+            const {chats}=data;
+            console.log(chats);
+            dispatch(setChats(chats.reduce((acc,chat)=>{
+                acc[chat._id]={
+                    id:chat._id,
+                    title:chat.title,
+                    messages:[],
+                    lastUpdated:chat.updatedAt
+                }
+                return acc;
+        },{})));
+        }catch(error){
+            dispatch(setIsError(true));
+        }finally{
+            dispatch(setLoading(false));
+        }
+    }
+
+    async function handleGetMessages(chatId){
+        try{
+            dispatch(setLoading(true));
+            const data=await getMessages(chatId);
+            const {messages}=data;
+            dispatch(setMessages({chatId,messages}));
+        }catch(error){
+            dispatch(setIsError(true));
+        }finally{
+            dispatch(setLoading(false));
+        }
+    }    
+
     return {
         initializeSocketConnection,
-        handlechatMessage
+        handlechatMessage,
+        handleGetChats,
+        handleGetMessages
     }
 }

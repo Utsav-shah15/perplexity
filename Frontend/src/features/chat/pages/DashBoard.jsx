@@ -12,6 +12,7 @@ const DashBoard = () => {
 
   useEffect(()=>{
     chat.initializeSocketConnection();
+    chat.handleGetChats();
   },[])
   
   return (

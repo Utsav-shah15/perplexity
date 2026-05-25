@@ -3,21 +3,188 @@ import {
   PenTool,
   Bug,
   Compass,
+  Copy,
+  Check,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import ChatInputBar from "./ChatInputBar";
 import { useSelector } from "react-redux";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useChat } from "../../hooks/useChat";
+import remarkGfm from "remark-gfm";
+
+// ─── Copy Button for Code Blocks ────────────────────────────────────────────
+function CopyButton({ code }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 text-[12px] text-[#71717a] hover:text-[#d4d4d8] transition-colors px-2 py-1 rounded-md hover:bg-white/5"
+    >
+      {copied ? (
+        <>
+          <Check size={12} className="text-green-400" />
+          <span className="text-green-400">Copied!</span>
+        </>
+      ) : (
+        <>
+          <Copy size={12} />
+          <span>Copy</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+// ─── Markdown Components ─────────────────────────────────────────────────────
+const markdownComponents = {
+  h1: ({ children }) => (
+    <h1 className="text-2xl font-bold text-white mt-6 mb-3 pb-2 border-b border-[#2a2638]">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-xl font-semibold text-white mt-5 mb-2.5">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="text-lg font-semibold text-[#d4bfff] mt-4 mb-2">
+      {children}
+    </h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="text-base font-semibold text-[#e4e4e7] mt-3 mb-1.5">
+      {children}
+    </h4>
+  ),
+  p: ({ children }) => (
+    <p className="text-[#c4c4c8] leading-7 mb-3 text-[15px]">{children}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="mb-3 pl-5 space-y-1.5 text-[#c4c4c8]">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-3 pl-5 space-y-1.5 text-[#c4c4c8] list-decimal">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="text-[15px] leading-6 relative pl-1 before:content-['•'] before:absolute before:-left-3.5 before:text-[#7c67ff]">
+      {children}
+    </li>
+  ),
+  strong: ({ children }) => (
+    <strong className="text-white font-semibold">{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em className="text-[#d4bfff] italic">{children}</em>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-[#7c67ff] pl-4 py-1 my-3 bg-[#1a1726] rounded-r-lg text-[#a1a1aa] italic">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="border-[#2a2638] my-5" />,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[#9d89ff] underline underline-offset-2 hover:text-[#c0b0ff] transition-colors"
+    >
+      {children}
+    </a>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-4 rounded-xl border border-[#2a2638]">
+      <table className="w-full text-[14px] text-[#c4c4c8]">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-[#1a1726] text-[#d4bfff]">{children}</thead>
+  ),
+  tr: ({ children }) => (
+    <tr className="border-b border-[#2a2638] hover:bg-white/[0.02] transition-colors">
+      {children}
+    </tr>
+  ),
+  th: ({ children }) => (
+    <th className="px-4 py-2.5 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }) => <td className="px-4 py-2.5">{children}</td>,
+
+  // ── Code: inline vs block (react-markdown v10 compatible) ──
+  code({ node, children, className, ...rest }) {
+    const match = /language-(\w+)/.exec(className || "");
+    const language = match?.[1] || "";
+    const isBlock = !!match || (node?.position?.start?.line !== node?.position?.end?.line);
+
+    if (!isBlock) {
+      return (
+        <code
+          className="bg-[#1e1b2e] text-[#d4bfff] px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-[#2a2638]"
+          {...rest}
+        >
+          {children}
+        </code>
+      );
+    }
+
+    const codeString = String(children).replace(/\n$/, "");
+
+    return (
+      <div className="my-4 rounded-xl overflow-hidden border border-[#2a2638] shadow-lg">
+        {/* Code block header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[#13111c] border-b border-[#2a2638]">
+          <span className="text-[12px] font-mono text-[#7c67ff] font-medium uppercase tracking-wider">
+            {language || "code"}
+          </span>
+          <CopyButton code={codeString} />
+        </div>
+        {/* Syntax highlighted code */}
+        <SyntaxHighlighter
+          language={language || "text"}
+          style={vscDarkPlus}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            background: "#0d0b14",
+            padding: "1.25rem",
+            fontSize: "13px",
+            lineHeight: "1.7",
+          }}
+          showLineNumbers={codeString.split("\n").length > 5}
+          lineNumberStyle={{ color: "#3d3a50", minWidth: "2rem" }}
+          wrapLongLines={false}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    );
+  },
+};
 
 export default function ChatContainer() {
   const { handlechatMessage } = useChat();
   const { chats, currentChatId } = useSelector(
     (state) => state.chat
   );
-
   const currentChat = chats[currentChatId];
+  console.log(currentChat);
   const messages = currentChat?.messages || [];
+  console.log(messages);
   const bottomRef = useRef(null);
 
   // Auto Scroll
@@ -60,10 +227,13 @@ export default function ChatContainer() {
                         <span className="text-sm">✨</span>
                       </div>
                       {/* Message */}
-                      <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 text-[#e4e4e7] text-[15px] leading-7 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)]">
-                        <p className="whitespace-pre-wrap">
+                      <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)]">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={markdownComponents}
+                        >
                           {msg.content}
-                        </p>
+                        </ReactMarkdown>
                       </div>
                     </div>
                   )}

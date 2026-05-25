@@ -11,11 +11,13 @@ import {
   Plus,
   Cloud
 } from "lucide-react";
+import {useSelector} from "react-redux";
+import { useDispatch } from "react-redux";
 
 export default function Sidebar() {
+  const chats=useSelector(state=>state.chat.chats);
   return (
     <div className="w-[260px] h-screen bg-[#1c1b22] border-r border-black/20 flex flex-col justify-between py-4 px-3">
-
       <div>
         <div className="flex items-center gap-3 mb-6 px-2 mt-1">
           <div className="bg-[#e4dcfb] p-1.5 rounded-lg flex items-center justify-center">
@@ -44,8 +46,14 @@ export default function Sidebar() {
         <div className="mt-8">
           <h3 className="text-[10px] font-bold text-[#71717a] tracking-[0.1em] mb-3 px-3 uppercase">Recent</h3>
           <div className="space-y-0.5">
-            <SidebarItem icon={<MessageSquare size={16} />} label="UI Design System" />
-            <SidebarItem icon={<MessageSquare size={16} />} label="Backend Logic" />
+            {Object.values(chats).map((chat) => (
+                <SidebarItem
+                    key={chat.id}
+                    chatId={chat.id}
+                    icon={<MessageSquare size={16} />}
+                    label={chat.title}
+                />
+              ))}
           </div>
         </div>
       </div>
