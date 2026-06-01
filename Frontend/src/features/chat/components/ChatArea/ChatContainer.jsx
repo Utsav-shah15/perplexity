@@ -178,21 +178,24 @@ const markdownComponents = {
 
 export default function ChatContainer() {
   const { handlechatMessage } = useChat();
-  const { chats, currentChatId } = useSelector(
+  const { chats, currentChatId, isLoading } = useSelector(
     (state) => state.chat
   );
   const currentChat = chats[currentChatId];
   console.log(currentChat);
   const messages = currentChat?.messages || [];
   console.log(messages);
-  const bottomRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   // Auto Scroll
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages]);
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages, isLoading]);
 
   const handleMessage = async ({ message }) => {
     await handlechatMessage({
@@ -202,13 +205,13 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#0f0e15] relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-[#0f0e15] relative overflow-hidden min-h-0">
 
       {/* CHAT MODE */}
       {messages.length > 0 ? (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-10">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-10">
             <div className="max-w-4xl mx-auto flex flex-col gap-8">
               {messages.map((msg, index) => (
                 <div
@@ -248,7 +251,24 @@ export default function ChatContainer() {
                   )}
                 </div>
               ))}
-              <div ref={bottomRef} />
+
+              {/* Typing Animation Loader */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex gap-4 max-w-full">
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-[#1d1b28] border border-[#2a2638] flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <span className="text-sm">✨</span>
+                    </div>
+                    {/* Dots */}
+                    <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)] flex items-center gap-1.5 h-11">
+                      <div className="w-2 h-2 bg-[#9d89ff] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-[#d4adff] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-[#ffb1d9] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

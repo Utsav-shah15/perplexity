@@ -1,0 +1,51 @@
+[2026-05-31T05:06:17.081Z] Socket.io server initialized
+[2026-05-31T05:06:17.131Z] Socket Handshake Headers Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0
+[2026-05-31T05:06:17.132Z] Parsed Cookies: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0"}
+[2026-05-31T05:06:17.135Z] Socket Auth Success for user: utsavshah098@gmail.com
+[2026-05-31T05:06:23.347Z] Socket.io server initialized
+[2026-05-31T05:06:23.429Z] Socket Handshake Headers Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0
+[2026-05-31T05:06:23.430Z] Parsed Cookies: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0"}
+[2026-05-31T05:06:23.432Z] Socket Auth Success for user: utsavshah098@gmail.com
+[2026-05-31T05:06:23.434Z] A user connected: ZrJdR-4igcWliIyOAAAB (user: utsavshah098@gmail.com)
+[2026-05-31T05:06:34.831Z] Socket.io server initialized
+[2026-05-31T05:06:34.874Z] Socket Handshake Headers Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0
+[2026-05-31T05:06:34.874Z] Parsed Cookies: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0"}
+[2026-05-31T05:06:34.877Z] Socket Auth Success for user: utsavshah098@gmail.com
+[2026-05-31T05:06:34.878Z] A user connected: RGrDA1hq7ZVLdk2OAAAB (user: utsavshah098@gmail.com)
+[2026-05-31T05:07:28.044Z] Socket Handshake Headers Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0
+[2026-05-31T05:07:28.045Z] Parsed Cookies: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0"}
+[2026-05-31T05:07:28.047Z] Socket Auth Success for user: utsavshah098@gmail.com
+[2026-05-31T05:07:28.047Z] A user connected: 5G4Re8Nq4g4OKFJ2AAAD (user: utsavshah098@gmail.com)
+[2026-05-31T05:07:39.994Z] Received sendMessage event. ChatId: null, Message: "explain the node.js"
+[2026-05-31T05:07:39.994Z] No activeChatId provided. Generating title...
+[2026-05-31T05:07:40.627Z] Generated Title: "Node.js Basics"
+[2026-05-31T05:07:40.719Z] Created new chat with ID: 6a1bc21cf22aefbc71998282
+[2026-05-31T05:07:40.770Z] Saved user message. ID: 6a1bc21cf22aefbc71998283
+[2026-05-31T05:07:40.774Z] Emitted chatCreated event
+[2026-05-31T05:07:40.775Z] Emitted userMessageSaved event
+[2026-05-31T05:07:40.828Z] Retrieved chat history. Total messages: 1
+[2026-05-31T05:07:40.829Z] Starting agent streamEvents loop...
+[2026-05-31T05:07:40.848Z] Stream chunk received. Event: on_chain_start, Name: LangGraph
+[2026-05-31T05:07:40.871Z] Stream chunk received. Event: on_chain_start, Name: __start__
+[2026-05-31T05:07:40.892Z] Stream chunk received. Event: on_chain_end, Name: __start__
+[2026-05-31T05:07:40.901Z] Stream chunk received. Event: on_chain_start, Name: model_request
+[2026-05-31T05:07:40.924Z] Stream chunk received. Event: on_chat_model_start, Name: ChatGoogleGenerativeAI
+[2026-05-31T05:09:13.539Z] Error in socket sendMessage: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 47.774288117s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"47s"}]
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 47.774288117s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-2.5-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"47s"}]
+    at handleResponseNotOk (C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContentStream (C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\@google\generative-ai\dist\index.js:862:22)
+    at async C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\@langchain\google-genai\dist\chat_models.cjs:567:23
+    at async Object.pRetry [as default] (C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\@langchain\core\dist\utils\p-retry\index.cjs:122:19)
+    at async run (C:\Users\HP\OneDrive\Desktop\perplexity\Backend\node_modules\p-queue\dist\index.js:163:29)
+[2026-05-31T05:15:26.034Z] Socket.io server initialized
+[2026-05-31T05:15:26.136Z] Socket Handshake Headers Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0
+[2026-05-31T05:15:26.137Z] Parsed Cookies: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGM1MmJkZDMwZTc5NzY5ODJhZmIyNSIsImVtYWlsIjoidXRzYXZzaGFoMDk4QGdtYWlsLmNvbSIsImlhdCI6MTc4MDIwMjA2NCwiZXhwIjoxNzgwODA2ODY0fQ.qA1sIkmb2vNr4zTb9SMlBYWu6V70SVNigfB3Gte5Jd0"}
+[2026-05-31T05:15:26.139Z] Socket Auth Success for user: utsavshah098@gmail.com
+[2026-05-31T05:15:26.140Z] A user connected: HsmVJLLvcAUSX9sYAAAB (user: utsavshah098@gmail.com)
+[2026-05-31T05:38:24.464Z] Socket.io server initialized

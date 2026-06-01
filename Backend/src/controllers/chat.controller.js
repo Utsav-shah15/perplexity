@@ -5,7 +5,8 @@ const Message=require("../models/message.model");
 
 async function sendMessage(req,res){
   try{
-      const {message,chat:chatId}=req.body;
+      const {message}=req.body;
+      const chatId = req.body.chatId || req.body.chat;
 
     let title=null,chat=null;
 
@@ -40,6 +41,7 @@ async function sendMessage(req,res){
         aimessage
     })
   } catch (error) {
+    console.error("Error in sendMessage:", error);
     res.status(500).json({
       message: "Error sending message",
       error: error.message
@@ -73,7 +75,7 @@ async function getMessages(req,res){
     })
 
     if(!chat){
-        res.status(404).json({
+        return res.status(404).json({
             "message":"chat not found"
         })
     }
@@ -98,7 +100,7 @@ async function deletechat(req,res){
     try{
         const {chatId}=req.params;
 
-        const chat=await chatModel.findOneAndDelete({
+        const chat=await Chat.findOneAndDelete({
             _id:chatId,
             user:req.user.id
         })
@@ -108,7 +110,7 @@ async function deletechat(req,res){
         })
 
         if(!chat){
-            res.status(404).json({
+            return res.status(404).json({
                 message:"chat not found"
             })
         }

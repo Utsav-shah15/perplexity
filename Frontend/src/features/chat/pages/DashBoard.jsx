@@ -22,13 +22,13 @@ const DashBoard = () => {
       <Sidebar />
 
       {/* Main Section */}
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative h-full min-h-0 overflow-hidden">
 
         {/* Top Navbar */}
         <TopNavigationBar />
 
         {/* Chat / Home Area */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           <ChatContainer />
         </div>
 

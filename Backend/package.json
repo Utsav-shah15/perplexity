@@ -5,6 +5,7 @@
     "@langchain/mistralai": "^1.0.8",
     "@langchain/openai": "^1.4.6",
     "@mistralai/mistralai": "^2.2.1",
+    "@tavily/core": "^0.7.3",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -17,14 +18,15 @@
     "morgan": "^1.10.1",
     "nodemailer": "^8.0.7",
     "nodemon": "^3.1.14",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "zod": "^4.4.3"
   },
   "name": "perplexity",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev": "nodemon --watch src --watch server.js server.js"
   },
   "repository": {
     "type": "git",
