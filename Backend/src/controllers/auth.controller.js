@@ -218,7 +218,7 @@ async function verifyemail(req,res){
     }catch(err){
         return res.status(500).json({
             success: false,
-            message: error.message,
+            message: err.message,
         });
     }
 }
@@ -285,20 +285,16 @@ async function resendVerificationEmail(req, res) {
       `http://localhost:5000/api/auth/verify-email?token=${token}`;
 
     // Send Email
-    await transporter.sendMail({
-      from: process.env.EMAIL,
+    await sendEmail({
       to: user.email,
-      subject: "Verify Your Email",
+      subject: "Verify Your Email - Aura AI",
+      text: `Click the link to verify your email: ${verificationUrl}`,
       html: `
-        <h2>Email Verification</h2>
-
-        <p>
-          Click below to verify your email
-        </p>
-
-        <a href="${verificationUrl}">
-          Verify Email
-        </a>
+        <div style="font-family: Arial; padding: 20px;">
+          <h2>Email Verification</h2>
+          <p>Click the button below to verify your email address.</p>
+          <a href="${verificationUrl}" style="display:inline-block;padding:12px 20px;background:black;color:white;text-decoration:none;border-radius:5px;">Verify Email</a>
+        </div>
       `,
     });
 
@@ -355,7 +351,11 @@ async function login(req,res){
             }
     );
 
-    res.cookie("token",token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     res.status(200).json({
             success: true,
@@ -397,10 +397,99 @@ async function getMe(req, res) {
   }
 }
   
+async function googleLogin(req, res) {
+  try {
+    const { credential, profile } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ success: false, message: "Google access token is required" });
+    }
+
+    // Fetch user profile from Google using the access token
+    const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${credential}` },
+    });
+
+    if (!googleRes.ok) {
+      return res.status(401).json({ success: false, message: "Invalid Google access token" });
+    }
+
+    const { sub: googleId, email, name, picture } = await googleRes.json();
+
+    // Find existing user by googleId or email
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      // Link Google account if user signed up with email/password before
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.verified = true;
+        if (picture && !user.avatar) user.avatar = picture;
+        await user.save();
+      }
+    } else {
+      // Create new Google user (no password required)
+      user = await User.create({
+        username: name,
+        email,
+        googleId,
+        avatar: picture,
+        verified: true,
+      });
+    }
+
+    // Issue JWT cookie
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      user,
+    });
+
+  } catch (error) {
+    console.error("Google login error:", error);
+    return res.status(401).json({
+      success: false,
+      message: "Google login failed",
+    });
+  }
+}
+
+async function logout(req, res) {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      sameSite: "lax",
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
 module.exports={
     register,
     verifyemail,
     resendVerificationEmail,
     login,
+    logout,
+    googleLogin,
     getMe
 }

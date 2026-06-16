@@ -18,7 +18,7 @@ export default function ChatInputBar({ onsend }) {
         <button className="flex items-center gap-1.5 hover:text-white transition-colors">
           <Zap size={14} />
           <span>Aura-4 Turbo</span>
-          ``    <span className="text-[10px] ml-0.5 opacity-50">▼</span>
+          <span className="text-[10px] ml-0.5 opacity-50">▼</span>
         </button>
         <button className="flex items-center gap-1.5 hover:text-white transition-colors">
           <Globe size={14} />

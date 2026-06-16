@@ -85,7 +85,6 @@ async function getMessages(req,res){
     })
 
     res.status(200).json({
-        messages:"messages",
         messages
     })
     }catch(error){

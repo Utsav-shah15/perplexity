@@ -102,7 +102,7 @@ function initSocket(httpServer){
 
                 // Stream the response from the LangChain agent
                 let fullContent = "";
-                const stream = streamResponse(messages);
+                const stream = streamResponse(messages, socket.user.id);
 
                 logToFile("Starting agent streamEvents loop...");
                 for await (const chunk of stream) {

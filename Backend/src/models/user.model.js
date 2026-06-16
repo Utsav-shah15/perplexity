@@ -1,5 +1,5 @@
-const mongoose=require("mongoose");
-const bcrypt=require("bcryptjs");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
@@ -18,13 +18,23 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
-      select:false
+      required: false,
+      select: false,
+    },
+
+    googleId: {
+      type: String,
+      default: null,
     },
 
     verified: {
       type: Boolean,
       default: false,
+    },
+
+    avatar: {
+      type: String,
+      default: null,
     },
   },
   {
@@ -32,19 +42,16 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Only hash password if it was modified AND exists
 userSchema.pre("save", async function () {
-
-  if (!this.isModified("password")) {
-    return;
-  }
-
+  if (!this.isModified("password") || !this.password) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
 userSchema.methods.comparePassword = async function (userPassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(userPassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);
-
-module.exports=User;
+module.exports = User;

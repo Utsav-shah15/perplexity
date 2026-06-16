@@ -3,7 +3,8 @@ const cookieParser=require("cookie-parser");
 
 const app=express();
 const authRouter=require("./routes/auth.routes");
-const chatRouter=require("./routes/chat.routes")
+const chatRouter=require("./routes/chat.routes");
+const knowledgeRouter=require("./routes/knowledge.routes");
 const morgan = require("morgan");
 const cors=require("cors");
 
@@ -20,5 +21,6 @@ app.use(
 );
 app.use("/auth",authRouter);
 app.use("/chats",chatRouter);
+app.use("/knowledge",knowledgeRouter);
 
 module.exports=app;

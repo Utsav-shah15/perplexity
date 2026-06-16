@@ -7,13 +7,19 @@ export default function SidebarItem({
   icon,
   label,
   active,
-  chatId
+  chatId,
+  onClick,   // optional: override default behavior
 }) {
 
   const dispatch=useDispatch();
   const { handleGetMessages, handleDeleteChat } = useChat();
 
   const handleClick = async () => {
+    // If a custom onClick is provided, use it
+    if (onClick) {
+      onClick();
+      return;
+    }
     if(!chatId) {
       if (label === "Home") {
         dispatch(setCurrentChatId(null));

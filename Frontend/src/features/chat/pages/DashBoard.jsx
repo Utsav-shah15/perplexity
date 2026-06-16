@@ -1,5 +1,4 @@
-import {useSelector} from "react-redux";
-import React from 'react'
+import { useSelector } from "react-redux";
 import { useEffect } from "react";
 import { useChat } from "../hooks/useChat";
 import Sidebar from "../components/SideBar/SideBar";
@@ -7,16 +6,15 @@ import TopNavigationBar from "../components/TopBar/TopNavigation";
 import ChatContainer from "../components/ChatArea/ChatContainer";
 
 const DashBoard = () => {
-  const chat=useChat();  
-  const {user}=useSelector(state=>state.auth);  
+  const { initializeSocketConnection, handleGetChats } = useChat();
 
-  useEffect(()=>{
-    chat.initializeSocketConnection();
-    chat.handleGetChats();
-  },[])
-  
+  useEffect(() => {
+    initializeSocketConnection();
+    handleGetChats();
+  }, []);
+
   return (
-     <div className="w-full h-screen flex bg-[#0f0e15] overflow-hidden font-sans">
+    <div className="w-full h-screen flex bg-[#0f0e15] overflow-hidden font-sans">
 
       {/* Sidebar */}
       <Sidebar />
@@ -43,7 +41,7 @@ const DashBoard = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default DashBoard
+export default DashBoard;
