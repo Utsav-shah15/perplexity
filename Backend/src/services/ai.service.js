@@ -18,6 +18,7 @@ const geminimodel = new ChatGoogleGenerativeAI({
 const mistralmodel = new ChatMistralAI({
   apiKey: process.env.MISTRAL_API_KEY,
   model: "mistral-small-latest",
+  streaming: true,
 });
 
 // Tools
@@ -35,15 +36,15 @@ const searchInternetTool = tool(
 );
 
 
-// Create a knowledge base tool scoped to a specific user.
-function createKnowledgeBaseTool(userId) {
+// Create a knowledge base tool scoped to a specific user and workspace.
+function createKnowledgeBaseTool(userId, workspaceId) {
   return tool(
-    async ({ query }) => searchKnowledgeBase({ query, userId }),
+    async ({ query }) => searchKnowledgeBase({ query, userId, workspaceId }),
     {
       name: "searchKnowledgeBase",
       description:
-        "Search the user's personal Knowledge Base (uploaded documents like PDFs, CSVs, TXTs). " +
-        "Use this tool when the user asks about their uploaded files or personal documents.",
+        "Search the user's Knowledge Base (uploaded documents like PDFs, CSVs, TXTs). " +
+        "Use this tool when the user asks about their uploaded files or documents.",
       schema: z.object({
         query: z.string().describe("The query to search in the knowledge base."),
       }),
@@ -53,43 +54,52 @@ function createKnowledgeBaseTool(userId) {
 
 // Agent
 const agent = createReactAgent({
-  llm: geminimodel,
+  llm: mistralmodel,
   tools: [searchInternetTool],
 });
 
 
 //Build an agent with both internet search + knowledge base tools.
-function createAgentWithKB(userId) {
+function createAgentWithKB(userId, workspaceId) {
   return createReactAgent({
-    llm: geminimodel,
-    tools: [searchInternetTool, createKnowledgeBaseTool(userId)],
+    llm: mistralmodel,
+    tools: [searchInternetTool, createKnowledgeBaseTool(userId, workspaceId)],
   });
 }
 
 // Functions
 
-// Non-streaming response (HTTP fallback)
-async function generateResponse(messages, userId = null) {
+// non-streaming response
+async function generateResponse(messages, userId = null, workspaceConfig = {}) {
   const formatted = messages.map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
-  const activeAgent = userId ? createAgentWithKB(userId) : agent;
+  // Prepend custom workspace instructions if set
+  if (workspaceConfig.customInstructions) {
+    formatted.unshift(new SystemMessage(workspaceConfig.customInstructions));
+  }
+
+  const activeAgent = userId ? createAgentWithKB(userId, workspaceConfig.workspaceId) : agent;
   const res = await activeAgent.invoke({ messages: formatted });
   const lastMsg = res.messages[res.messages.length - 1];
   return lastMsg.content;
 }
 
-// Streaming generator — yields LangGraph streamEvents chunks
-// Used by Socket.io server for real-time streaming
-async function* streamResponse(messages, userId = null) {
+// streaming response
+async function* streamResponse(messages, userId = null, workspaceConfig = {}) {
   const formatted = messages.map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
-  const activeAgent = userId ? createAgentWithKB(userId) : agent;
+  // Prepend custom workspace instructions if set
+  if (workspaceConfig.customInstructions) {
+    formatted.unshift(new SystemMessage(workspaceConfig.customInstructions));
+  }
+
+  const activeAgent = userId ? createAgentWithKB(userId, workspaceConfig.workspaceId) : agent;
 
   const eventStream = activeAgent.streamEvents(
     { messages: formatted },

@@ -1,12 +1,12 @@
 import { io } from "socket.io-client";
-import { 
-  createNewChat, 
-  addNewMessage,
-  deleteChatFromState, 
-  appendMessageChunk, 
-  setToolStatus, 
-  setLoading, 
-  setCurrentChatId 
+import {
+    createNewChat,
+    addNewMessage,
+    deleteChatFromState,
+    appendMessageChunk,
+    setToolStatus,
+    setLoading,
+    setCurrentChatId
 } from "../chat.slice";
 
 let socket = null;
@@ -39,6 +39,10 @@ export const initializeSocketConnection = (dispatch) => {
             dispatch(setToolStatus({ chatId, status: `🔍 Searching the web...` }));
         });
 
+        socket.on("userMessageSaved", ({ usermessage, chatId }) => {
+            // User message confirmed saved in DB — no extra action needed
+        });
+
         socket.on("chunk", ({ chunk, chatId }) => {
             dispatch(setLoading(false));
             dispatch(appendMessageChunk({ chatId, chunk }));
@@ -55,7 +59,6 @@ export const initializeSocketConnection = (dispatch) => {
 
         socket.on("disconnect", () => {
             console.log("disconnected from Socket.IO server");
-            socket = null;
         });
     }
     return socket;

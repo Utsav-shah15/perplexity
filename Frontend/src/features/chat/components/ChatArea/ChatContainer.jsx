@@ -182,10 +182,12 @@ export default function ChatContainer() {
     (state) => state.chat
   );
   const currentChat = chats[currentChatId];
-  console.log(currentChat);
   const messages = currentChat?.messages || [];
-  console.log(messages);
   const messagesContainerRef = useRef(null);
+
+  // Show typing dots only when loading but no AI message has started yet
+  const lastMsg = messages[messages.length - 1];
+  const showLoadingDots = isLoading && (!lastMsg || lastMsg.role === "user");
 
   // Auto Scroll
   useEffect(() => {
@@ -253,7 +255,7 @@ export default function ChatContainer() {
               ))}
 
               {/* Typing Animation Loader */}
-              {isLoading && (
+              {showLoadingDots && (
                 <div className="flex justify-start">
                   <div className="flex gap-4 max-w-full">
                     {/* Avatar */}

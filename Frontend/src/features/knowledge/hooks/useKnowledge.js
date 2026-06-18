@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import {
   uploadDocument,
   getDocuments,
@@ -12,24 +13,27 @@ export function useKnowledge() {
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
 
-  // Fetch all documents for the current user
+  // Read active workspace from Redux
+  const { activeWorkspaceId } = useSelector((state) => state.workspace);
+
+  // Fetch documents — filtered by active workspace
   const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getDocuments();
+      const data = await getDocuments(activeWorkspaceId);
       setDocuments(data.documents || []);
     } catch {
       setDocuments([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
 
-  // Upload a file and poll for ready status
+  // Upload a file — scoped to active workspace
   const handleUpload = useCallback(async (file) => {
     if (!file) return;
 
@@ -38,10 +42,9 @@ export function useKnowledge() {
     setUploadSuccess(null);
 
     try {
-      await uploadDocument(file);
+      await uploadDocument(file, activeWorkspaceId);
       setUploadSuccess(`"${file.name}" uploaded! Processing embeddings...`);
 
-      // Poll for status updates (processing → ready)
       setTimeout(() => fetchDocuments(), 3000);
       setTimeout(() => fetchDocuments(), 8000);
       setTimeout(() => fetchDocuments(), 15000);
@@ -50,7 +53,7 @@ export function useKnowledge() {
     } finally {
       setUploading(false);
     }
-  }, [fetchDocuments]);
+  }, [fetchDocuments, activeWorkspaceId]);
 
   // Delete a document by ID
   const handleDelete = useCallback(async (docId) => {

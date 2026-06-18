@@ -11,9 +11,8 @@ const Protected = ({children}) => {
                 Loading...
            </div>
   }
-  console.log(user)
   if(!user){
-    return <Navigate to="/login"/>
+    return <Navigate to="/login"/>;
   }
 
   return children;

@@ -282,7 +282,7 @@ async function resendVerificationEmail(req, res) {
 
     // Verification URL
     const verificationUrl =
-      `http://localhost:5000/api/auth/verify-email?token=${token}`;
+      `http://localhost:3000/auth/verify-email?token=${token}`;
 
     // Send Email
     await sendEmail({
@@ -396,75 +396,6 @@ async function getMe(req, res) {
     });
   }
 }
-  
-async function googleLogin(req, res) {
-  try {
-    const { credential, profile } = req.body;
-
-    if (!credential) {
-      return res.status(400).json({ success: false, message: "Google access token is required" });
-    }
-
-    // Fetch user profile from Google using the access token
-    const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${credential}` },
-    });
-
-    if (!googleRes.ok) {
-      return res.status(401).json({ success: false, message: "Invalid Google access token" });
-    }
-
-    const { sub: googleId, email, name, picture } = await googleRes.json();
-
-    // Find existing user by googleId or email
-    let user = await User.findOne({ $or: [{ googleId }, { email }] });
-
-    if (user) {
-      // Link Google account if user signed up with email/password before
-      if (!user.googleId) {
-        user.googleId = googleId;
-        user.verified = true;
-        if (picture && !user.avatar) user.avatar = picture;
-        await user.save();
-      }
-    } else {
-      // Create new Google user (no password required)
-      user = await User.create({
-        username: name,
-        email,
-        googleId,
-        avatar: picture,
-        verified: true,
-      });
-    }
-
-    // Issue JWT cookie
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Google login successful",
-      user,
-    });
-
-  } catch (error) {
-    console.error("Google login error:", error);
-    return res.status(401).json({
-      success: false,
-      message: "Google login failed",
-    });
-  }
-}
 
 async function logout(req, res) {
   try {
@@ -490,6 +421,5 @@ module.exports={
     resendVerificationEmail,
     login,
     logout,
-    googleLogin,
     getMe
 }

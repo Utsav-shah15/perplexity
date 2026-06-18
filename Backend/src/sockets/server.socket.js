@@ -1,8 +1,9 @@
-const {Server}=require("socket.io")
-const jwt=require("jsonwebtoken");
+const { Server } = require("socket.io")
+const jwt = require("jsonwebtoken");
 const { streamResponse, generateTitleResponse } = require("../services/ai.service");
 const Chat = require("../models/chat.model");
 const Message = require("../models/message.model");
+const Workspace = require("../models/workspace.model");
 
 let io;
 
@@ -25,11 +26,11 @@ function logToFile(message) {
     fs.appendFileSync(logFilePath, `[${timestamp}] ${message}\n`);
 }
 
-function initSocket(httpServer){
-    io=new Server(httpServer,{
-        cors:{
-            origin:"http://localhost:5173",
-            credentials:true
+function initSocket(httpServer) {
+    io = new Server(httpServer, {
+        cors: {
+            origin: "http://localhost:5173",
+            credentials: true
         }
     })
 
@@ -56,8 +57,9 @@ function initSocket(httpServer){
         }
     });
 
-    io.on("connection",(socket)=>{
+    io.on("connection", (socket) => {
         logToFile(`A user connected: ${socket.id} (user: ${socket.user?.email})`);
+        console.log(`🟢 Socket connected: ${socket.id} | User: ${socket.user?.email}`);
 
         socket.on("sendMessage", async ({ message, chatId }) => {
             try {
@@ -102,7 +104,20 @@ function initSocket(httpServer){
 
                 // Stream the response from the LangChain agent
                 let fullContent = "";
-                const stream = streamResponse(messages, socket.user.id);
+
+                // Fetch workspace config if inside a workspace
+                let workspaceConfig = {};
+                if (workspaceId) {
+                    const ws = await Workspace.findById(workspaceId);
+                    if (ws) {
+                        workspaceConfig = {
+                            workspaceId: ws._id.toString(),
+                            customInstructions: ws.customInstructions || "",
+                        };
+                    }
+                }
+
+                const stream = streamResponse(messages, socket.user.id, workspaceConfig);
 
                 logToFile("Starting agent streamEvents loop...");
                 for await (const chunk of stream) {
@@ -141,18 +156,23 @@ function initSocket(httpServer){
                 socket.emit("error", { message: "Error processing your request", details: error.message });
             }
         });
+
+        socket.on("disconnect", () => {
+            console.log(`🔴 Socket disconnected: ${socket.id}`);
+            logToFile(`Socket disconnected: ${socket.id}`);
+        });
     })
 }
 
-function getIO(){
-    if(!io){
+function getIO() {
+    if (!io) {
         throw new Error("socket.io is not initialized");
     }
 
     return io;
 }
 
-module.exports={
+module.exports = {
     initSocket,
     getIO
 }

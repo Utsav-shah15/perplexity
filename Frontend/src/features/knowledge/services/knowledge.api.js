@@ -5,10 +5,13 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Upload a file to the knowledge base
-export async function uploadDocument(file) {
+// Upload a file to the knowledge base (optionally scoped to a workspace)
+export async function uploadDocument(file, workspaceId) {
   const formData = new FormData();
   formData.append("file", file);
+  if (workspaceId) {
+    formData.append("workspace", workspaceId);
+  }
 
   const response = await api.post("/knowledge/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -16,9 +19,10 @@ export async function uploadDocument(file) {
   return response.data;
 }
 
-// Get all uploaded documents 
-export async function getDocuments() {
-  const response = await api.get("/knowledge/documents");
+// Get all uploaded documents (optionally filtered by workspace)
+export async function getDocuments(workspaceId) {
+  const params = workspaceId ? { workspace: workspaceId } : {};
+  const response = await api.get("/knowledge/documents", { params });
   return response.data;
 }
 

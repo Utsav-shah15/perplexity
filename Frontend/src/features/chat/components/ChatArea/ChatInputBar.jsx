@@ -46,7 +46,7 @@ export default function ChatInputBar({ onsend }) {
           <button className="text-[#a1a1aa] hover:text-white transition-colors p-1.5 rounded-lg">
             <Mic size={18} />
           </button>
-          <button 
+          <button
             onClick={handleMessage}
             className="bg-[#e4dcfb] hover:bg-[#d6c9fa] text-[#6d28d9] w-9 h-9 rounded-xl flex items-center justify-center transition-colors ml-1 shadow-sm"
           >

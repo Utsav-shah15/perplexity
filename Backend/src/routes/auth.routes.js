@@ -5,7 +5,6 @@ const {
   verifyemail,
   login,
   logout,
-  googleLogin,
   getMe,
   resendVerificationEmail,
 } = require("../controllers/auth.controller.js");
@@ -15,7 +14,6 @@ authRouter.post("/register", register);
 authRouter.get("/verify-email", verifyemail);
 authRouter.post("/resend-verification", resendVerificationEmail);
 authRouter.post("/login", login);
-authRouter.post("/google", googleLogin);          // ← Google OAuth
 authRouter.get("/get-me", authUser, getMe);
 authRouter.post("/logout", logout);
 

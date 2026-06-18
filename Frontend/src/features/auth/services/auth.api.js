@@ -26,9 +26,4 @@ export async function getMe(){
 export async function logout(){
     const response=await api.post("auth/logout");
     return response.data;
-}
-
-export async function googleLogin({ credential, profile }) {
-    const response = await api.post("auth/google", { credential, profile });
-    return response.data;
-}
+}

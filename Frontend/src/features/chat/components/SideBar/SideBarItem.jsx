@@ -15,19 +15,22 @@ export default function SidebarItem({
   const { handleGetMessages, handleDeleteChat } = useChat();
 
   const handleClick = async () => {
-    // If a custom onClick is provided, use it
+    // If chatId exists, select it and load messages
+    if (chatId) {
+      dispatch(setCurrentChatId(chatId));
+      await handleGetMessages(chatId);
+      // Also call custom onClick if provided (e.g. to switch view to "chat")
+      if (onClick) onClick();
+      return;
+    }
+    // For non-chat items, just call onClick
     if (onClick) {
       onClick();
       return;
     }
-    if(!chatId) {
-      if (label === "Home") {
-        dispatch(setCurrentChatId(null));
-      }
-      return;
+    if (label === "Home") {
+      dispatch(setCurrentChatId(null));
     }
-    dispatch(setCurrentChatId(chatId));
-    await handleGetMessages(chatId);
   };
 
   const handleDelete = async (e) => {

@@ -7,6 +7,11 @@ const documentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    workspace: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workspace",
+      default: null,
+    },
     filename: {
       type: String,
       required: true,
@@ -23,7 +28,6 @@ const documentSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    // Extracted text chunks with their embeddings stored here
     chunks: [
       {
         content: { type: String, required: true },

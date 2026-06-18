@@ -16,13 +16,14 @@ import {
 export const useChat = () => {
   const dispatch = useDispatch();
   const { currentChatId } = useSelector((state) => state.chat);
+  const { activeWorkspaceId } = useSelector((state) => state.workspace);
 
   // Initialize socket and attach Redux dispatch listeners
   const initializeSocket = useCallback(() => {
     initializeSocketConnection(dispatch);
   }, [dispatch]);
 
-  // Send a message via socket (or HTTP fallback)
+  // handle  
   const handleSendMessage = useCallback(async ({ message, chatId }) => {
     try {
       // Optimistic update — add user message instantly
@@ -54,7 +55,7 @@ export const useChat = () => {
 
       if (socket && socket.connected) {
         // Prefer real-time socket streaming
-        socket.emit("sendMessage", { message, chatId });
+        socket.emit("sendMessage", { message, chatId, workspaceId: activeWorkspaceId });
       } else {
         // HTTP fallback
         const data = await sendMessage({ message, chatId });
@@ -78,13 +79,15 @@ export const useChat = () => {
       }
       dispatch(setLoading(false));
     }
-  }, [dispatch]);
+  }, [dispatch, activeWorkspaceId]);
 
-  // Fetch all chats for the current user
-  const handleGetChats = useCallback(async () => {
+  // Fetch all chats for the current user (filtered by workspace)
+  // Accepts optional explicit workspaceId to override Redux state
+  const handleGetChats = useCallback(async (explicitWorkspaceId) => {
     try {
       dispatch(setLoading(true));
-      const data = await getChats();
+      const wsId = explicitWorkspaceId !== undefined ? explicitWorkspaceId : activeWorkspaceId;
+      const data = await getChats(wsId);
       const normalized = data.chats.reduce((acc, chat) => {
         acc[chat._id] = {
           id: chat._id,
@@ -100,7 +103,7 @@ export const useChat = () => {
     } finally {
       dispatch(setLoading(false));
     }
-  }, [dispatch]);
+  }, [dispatch, activeWorkspaceId]);
 
   // Fetch messages for a specific chat
   const handleGetMessages = useCallback(async (chatId) => {

@@ -1,6 +1,6 @@
 const { GoogleGenerativeAIEmbeddings } = require("@langchain/google-genai");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 const Document = require("../models/document.model");
 
 // Embedding model
@@ -20,7 +20,8 @@ const splitter = new RecursiveCharacterTextSplitter({
  */
 async function extractText(buffer, mimeType) {
   if (mimeType === "application/pdf") {
-    const data = await pdfParse(buffer);
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    const data = await parser.getText();
     return data.text;
   }
   if (mimeType === "text/plain" || mimeType === "text/csv") {
@@ -36,9 +37,10 @@ async function extractText(buffer, mimeType) {
  * 3. Embed each chunk using Gemini
  * 4. Save to MongoDB Document model
  */
-async function processDocument({ buffer, mimeType, filename, originalName, size, userId }) {
+async function processDocument({ buffer, mimeType, filename, originalName, size, userId, workspaceId }) {
   const doc = await Document.create({
     user: userId,
+    workspace: workspaceId || null,
     filename,
     originalName,
     mimeType,
@@ -91,12 +93,18 @@ function cosineSimilarity(vecA, vecB) {
  * Search user's knowledge base for chunks relevant to a query.
  * Returns top-k matching chunks as a formatted string.
  */
-async function searchKnowledgeBase({ query, userId, topK = 5 }) {
+async function searchKnowledgeBase({ query, userId, workspaceId, topK = 5 }) {
   // Embed the query
   const queryEmbedding = await embeddings.embedQuery(query);
 
-  // Fetch all user documents with chunks
-  const docs = await Document.find({ user: userId, status: "ready" });
+  // Fetch documents — filter by workspace
+  const filter = { user: userId, status: "ready" };
+  if (workspaceId) {
+    filter.workspace = workspaceId;
+  } else {
+    filter.workspace = null;
+  }
+  const docs = await Document.find(filter);
 
   if (docs.length === 0) {
     return "No documents found in the knowledge base.";

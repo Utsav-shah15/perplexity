@@ -1,5 +1,5 @@
 import { useDispatch } from "react-redux";
-import { register, login, getMe, logout, googleLogin } from "../services/auth.api";
+import { register, login, getMe, logout } from "../services/auth.api";
 import { setUser, setError, setLoading } from "../authSlice";
 
 export function useAuth() {
@@ -30,18 +30,6 @@ export function useAuth() {
     }
   }
 
-  async function handleGoogleLogin({ credential, profile }) {
-    try {
-      dispatch(setLoading(true));
-      const data = await googleLogin({ credential, profile });
-      dispatch(setUser(data.user));
-    } catch (err) {
-      dispatch(setError(err.response?.data?.message || "Google login failed"));
-      throw err;
-    } finally {
-      dispatch(setLoading(false));
-    }
-  }
 
   async function handleLogout() {
     try {
@@ -71,7 +59,6 @@ export function useAuth() {
   return {
     handleRegister,
     handleLogin,
-    handleGoogleLogin,
     handleLogout,
     handleGetMe,
   };

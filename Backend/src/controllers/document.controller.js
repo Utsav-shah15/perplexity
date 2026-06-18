@@ -11,6 +11,7 @@ async function uploadDocument(req, res) {
 
     const { buffer, mimetype, originalname, size } = req.file;
     const filename = `${Date.now()}-${originalname}`;
+    const workspaceId = req.body.workspace || null;
 
     res.status(202).json({
       success: true,
@@ -25,6 +26,7 @@ async function uploadDocument(req, res) {
       originalName: originalname,
       size,
       userId: req.user.id,
+      workspaceId,
     });
 
   } catch (error) {
@@ -39,8 +41,17 @@ async function uploadDocument(req, res) {
 // GET /knowledge/documents- List all uploaded documents for the current user
 async function getDocuments(req, res) {
   try {
-    const docs = await Document.find({ user: req.user.id })
-      .select("originalName size status mimeType createdAt")
+    const { workspace } = req.query;
+    const filter = { user: req.user.id };
+
+    if (workspace) {
+      filter.workspace = workspace;
+    } else {
+      filter.workspace = null;
+    }
+
+    const docs = await Document.find(filter)
+      .select("originalName size status mimeType createdAt workspace")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, documents: docs });
@@ -74,11 +85,11 @@ async function deleteDocument(req, res) {
 // GET /knowledge/search?q=...- Manually search knowledge base
 async function searchDocuments(req, res) {
   try {
-    const { q } = req.query;
+    const { q, workspace } = req.query;
     if (!q) {
       return res.status(400).json({ success: false, message: "Query is required" });
     }
-    const result = await searchKnowledgeBase({ query: q, userId: req.user.id });
+    const result = await searchKnowledgeBase({ query: q, userId: req.user.id, workspaceId: workspace || null });
     res.status(200).json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
