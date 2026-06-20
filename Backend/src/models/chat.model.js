@@ -14,6 +14,12 @@ const chatSchema = new mongoose.Schema(
       default: null,
     },
 
+    agent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Agent",
+      default: null, // null = default assistant
+    },
+
     title: {
       type: String,
       default: "New Chat",

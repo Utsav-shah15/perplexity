@@ -172,6 +172,42 @@ export default function Register() {
               Create Account
             </button>
 
+            {/* Divider */}
+            <div className="flex items-center my-4">
+              <div className="flex-1 border-t border-white/10"></div>
+              <span className="px-3 text-xs text-gray-400 uppercase">Or</span>
+              <div className="flex-1 border-t border-white/10"></div>
+            </div>
+
+            {/* Google OAuth Button */}
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "http://localhost:3000/auth/google";
+              }}
+              className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition cursor-pointer"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.974 0 12 0 7.354 0 3.307 2.68 1.285 6.6L5.266 9.765z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M16.04 15.345c-1.07.727-2.42 1.164-4.04 1.164-2.927 0-5.418-1.982-6.309-4.654L1.71 14.936C3.727 18.91 7.854 21.6 12 21.6c3.273 0 6.046-1.09 8.055-2.945l-4.015-3.31z"
+                />
+                <path
+                  fill="#4285F4"
+                  d="M23.49 12.275c0-.818-.08-1.609-.218-2.373H12v4.51h6.473c-.273 1.482-1.127 2.736-2.427 3.59l4.018 3.31c2.355-2.173 3.727-5.382 3.727-8.727z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.69 11.855a7.02 7.02 0 010-2.09L1.71 6.827a11.968 11.968 0 000 10.346l3.98-3.318z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+
           </form>
 
 

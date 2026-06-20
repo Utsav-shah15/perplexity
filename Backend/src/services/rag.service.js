@@ -1,12 +1,15 @@
 const { GoogleGenerativeAIEmbeddings } = require("@langchain/google-genai");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { PDFParse } = require("pdf-parse");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Document = require("../models/document.model");
+
+const genAI = process.env.GOOGLE_API_KEY ? new GoogleGenerativeAI(process.env.GOOGLE_API_KEY) : null;
 
 // Embedding model
 const embeddings = new GoogleGenerativeAIEmbeddings({
   apiKey: process.env.GOOGLE_API_KEY,
-  model: "text-embedding-004",
+  model: "gemini-embedding-001",
 });
 
 // Text splitter
@@ -15,9 +18,7 @@ const splitter = new RecursiveCharacterTextSplitter({
   chunkOverlap: 200,
 });
 
-/**
- * Extract raw text from a file buffer based on mime type.
- */
+// Extract raw text from a file buffer based on mime type.
 async function extractText(buffer, mimeType) {
   if (mimeType === "application/pdf") {
     const parser = new PDFParse({ data: new Uint8Array(buffer) });
@@ -26,6 +27,22 @@ async function extractText(buffer, mimeType) {
   }
   if (mimeType === "text/plain" || mimeType === "text/csv") {
     return buffer.toString("utf-8");
+  }
+  if (mimeType && mimeType.startsWith("image/")) {
+    if (!genAI) {
+      throw new Error("Google API Key is not configured for image analysis.");
+    }
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const response = await model.generateContent([
+      "Describe the contents of this image in detail. Extract any visible text (OCR), identify charts, diagrams, mockups, or visual structures, and explain the key elements and context shown in the image. This description will be stored in a knowledge base for semantic search.",
+      {
+        inlineData: {
+          data: buffer.toString("base64"),
+          mimeType: mimeType
+        }
+      }
+    ]);
+    return response.response.text();
   }
   throw new Error(`Unsupported file type: ${mimeType}`);
 }
@@ -79,9 +96,8 @@ async function processDocument({ buffer, mimeType, filename, originalName, size,
   }
 }
 
-/**
- * Cosine similarity between two vectors
- */
+
+// Cosine similarity between two vectors
 function cosineSimilarity(vecA, vecB) {
   const dot = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
   const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));

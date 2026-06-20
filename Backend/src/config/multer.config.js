@@ -8,11 +8,15 @@ const fileFilter = (req, file, cb) => {
     "application/pdf",
     "text/plain",
     "text/csv",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
   ];
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only PDF, TXT, and CSV files are allowed"), false);
+    cb(new Error("Only PDF, TXT, CSV, and image files are allowed"), false);
   }
 };
 

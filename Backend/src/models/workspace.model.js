@@ -38,11 +38,17 @@ const workspaceSchema = new mongoose.Schema(
       },
     ],
 
-    // Custom AI instructions that apply to every chat in this workspace
     customInstructions: {
       type: String,
       default: "",
     },
+
+    deployedAgents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Agent",
+      },
+    ],
 
     color: {
       type: String,

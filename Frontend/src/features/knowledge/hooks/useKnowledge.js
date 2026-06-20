@@ -43,11 +43,8 @@ export function useKnowledge() {
 
     try {
       await uploadDocument(file, activeWorkspaceId);
-      setUploadSuccess(`"${file.name}" uploaded! Processing embeddings...`);
-
-      setTimeout(() => fetchDocuments(), 3000);
-      setTimeout(() => fetchDocuments(), 8000);
-      setTimeout(() => fetchDocuments(), 15000);
+      setUploadSuccess(`"${file.name}" uploaded and indexed successfully!`);
+      fetchDocuments();
     } catch (err) {
       setUploadError(err.response?.data?.message || "Upload failed");
     } finally {

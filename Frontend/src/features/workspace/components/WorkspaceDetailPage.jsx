@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Search,
   FileText,
@@ -47,8 +47,9 @@ const STATUS_STYLES = {
 export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
   const dispatch = useDispatch();
   const { chats } = useSelector((state) => state.chat);
+  const { user } = useSelector((state) => state.auth);
   const { handleGetChats, handlechatMessage } = useChat();
-  const { handleUpdateWorkspace } = useWorkspace();
+  const { handleUpdateWorkspace, handleInviteMember, handleRemoveMember } = useWorkspace();
   const {
     documents,
     loading: docsLoading,
@@ -65,13 +66,47 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
   const [messageInput, setMessageInput] = useState("");
   const fileInputRef = useRef(null);
 
-  // Load workspace-specific chats — pass workspace ID directly
-  useEffect(() => {
-    handleGetChats(workspace._id);
-  }, [workspace._id]);
+  // Quick invite states
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("viewer");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState(null);
+
+  const handleQuickInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviteLoading(true);
+    setInviteFeedback(null);
+    const ok = await handleInviteMember(workspace._id, {
+      email: inviteEmail.trim(),
+      role: inviteRole,
+    });
+    setInviteLoading(false);
+    if (ok) {
+      setInviteEmail("");
+      setInviteFeedback({ type: "success", text: "Teammate added!" });
+      setTimeout(() => setInviteFeedback(null), 3000);
+    } else {
+      setInviteFeedback({ type: "error", text: "Failed to invite teammate." });
+      setTimeout(() => setInviteFeedback(null), 3000);
+    }
+  };
+
+  const isViewer = useMemo(() => {
+    if (!workspace) return false;
+    const userId = user?._id || user?.id;
+    const ownerId = workspace.owner?._id || workspace.owner;
+    if (ownerId && userId && ownerId.toString() === userId.toString()) {
+      return false;
+    }
+    const memberRecord = workspace.members?.find(m => {
+      const mId = m.user?._id || m.user;
+      return mId && userId && mId.toString() === userId.toString();
+    });
+    return memberRecord?.role === "viewer";
+  }, [workspace, user]);
 
   const workspaceChats = Object.values(chats)
-    .filter(() => true) // chats already filtered by activeWorkspaceId in useChat
+    .filter((chat) => chat.workspace?._id === workspace._id || chat.workspace === workspace._id)
     .sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
 
   // Save instructions
@@ -83,10 +118,12 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
   // Start a new session (chat) in this workspace
   const handleStartSession = async () => {
     if (!messageInput.trim()) return;
-    dispatch(setCurrentChatId(null));
-    await handlechatMessage({ message: messageInput, chatId: null });
+    const msg = messageInput;
     setMessageInput("");
     onOpenChat();
+    
+    // Send message asynchronously in the background
+    handlechatMessage({ message: msg, chatId: null });
   };
 
   // Open existing session
@@ -196,14 +233,15 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
 
         {/* Chat Input Bar */}
         <div className="px-8 pb-6 pt-3">
-          <div className="bg-[#1c1b22] border border-[#2a2638] rounded-2xl px-5 py-3">
+          <div className={`bg-[#1c1b22] border border-[#2a2638] rounded-2xl px-5 py-3 ${isViewer ? "opacity-50" : ""}`}>
             <input
               type="text"
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleStartSession()}
-              placeholder={`Start a session in ${workspace.name.toLowerCase()}`}
-              className="w-full bg-transparent text-[#e4e4e7] text-sm placeholder-[#3d3a50] outline-none"
+              onKeyDown={(e) => e.key === "Enter" && !isViewer && handleStartSession()}
+              disabled={isViewer}
+              placeholder={isViewer ? "You have viewer-only access to this workspace." : `Start a session in ${workspace.name.toLowerCase()}`}
+              className="w-full bg-transparent text-[#e4e4e7] text-sm placeholder-[#3d3a50] outline-none disabled:cursor-not-allowed"
             />
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#252233]">
               <div className="flex items-center gap-2">
@@ -216,7 +254,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
               </div>
               <button
                 onClick={handleStartSession}
-                disabled={!messageInput.trim()}
+                disabled={isViewer || !messageInput.trim()}
                 className="w-8 h-8 rounded-full bg-[#9d89ff] hover:bg-[#8b75ff] flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -351,6 +389,113 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Members / Team Collaboration */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-semibold text-[#f3f3f3]">Members</h3>
+              <span className="text-[10px] text-[#71717a] font-medium px-2 py-0.5 rounded bg-white/5">
+                {workspace.members?.length || 1}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#71717a] mb-3">
+              Manage who has access to this workspace.
+            </p>
+
+            {/* Members List */}
+            <div className="space-y-1.5 max-h-[160px] overflow-y-auto mb-3 pr-1">
+              {workspace.members?.map((member) => {
+                const memberUser = member.user;
+                const memberId = memberUser?._id || memberUser;
+                const isOwner = member.role === "owner";
+                
+                // Find if current user is owner of workspace
+                const currentUserId = user?._id || user?.id;
+                const isCurrentWorkspaceOwner = workspace.owner === currentUserId || workspace.owner?._id === currentUserId;
+
+                // Resolve email with fallbacks
+                let memberEmail = "Teammate";
+                if (memberUser && typeof memberUser === "object" && memberUser.email) {
+                  memberEmail = memberUser.email;
+                } else if (memberId && currentUserId && memberId.toString() === currentUserId.toString()) {
+                  memberEmail = user?.email || "You";
+                } else if (memberId && workspace.owner && (memberId.toString() === workspace.owner.toString() || memberId.toString() === workspace.owner?._id?.toString())) {
+                  memberEmail = workspace.owner?.email || "Owner";
+                }
+
+                return (
+                  <div
+                    key={memberId}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#15131c] border border-[#252233] group"
+                  >
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs text-[#e4e4e7] truncate font-medium">
+                        {memberEmail}
+                      </span>
+                      <span className="text-[9px] text-[#71717a] capitalize">
+                        {member.role}
+                      </span>
+                    </div>
+                    
+                    {/* Only show delete button if current user is owner and member is not the owner */}
+                    {isCurrentWorkspaceOwner && !isOwner && (
+                      <button
+                        onClick={() => handleRemoveMember(workspace._id, memberId)}
+                        className="text-[#71717a] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Remove member"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quick Invite Form (Only for Workspace Owners/Editors) */}
+            {(() => {
+              const currentUserId = user?._id || user?.id;
+              const isOwner = workspace.owner === currentUserId || workspace.owner?._id === currentUserId;
+              const memberRecord = workspace.members?.find(m => (m.user?._id || m.user) === currentUserId);
+              const isEditor = memberRecord && (memberRecord.role === "editor" || memberRecord.role === "owner");
+              
+              if (!isOwner && !isEditor) return null;
+
+              return (
+                <div className="space-y-2 pt-2 border-t border-[#1e1d26]">
+                  <div className="flex gap-1">
+                    <input
+                      type="email"
+                      placeholder="Add email..."
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="flex-1 bg-[#15131c] border border-[#252233] rounded-lg px-2 py-1 text-xs text-[#e4e4e7] outline-none"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value)}
+                      className="bg-[#15131c] border border-[#252233] rounded-lg px-1 py-1 text-xs text-[#a1a1aa] outline-none"
+                    >
+                      <option value="viewer">Viewer</option>
+                      <option value="editor">Editor</option>
+                    </select>
+                    <button
+                      onClick={handleQuickInvite}
+                      disabled={inviteLoading || !inviteEmail.trim()}
+                      className="bg-[#9d89ff] hover:bg-[#8b75ff] text-white p-1 rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 cursor-pointer"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                  {inviteFeedback && (
+                    <p className={`text-[10px] ${inviteFeedback.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+                      {inviteFeedback.text}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Links (placeholder) */}

@@ -13,13 +13,7 @@ async function uploadDocument(req, res) {
     const filename = `${Date.now()}-${originalname}`;
     const workspaceId = req.body.workspace || null;
 
-    res.status(202).json({
-      success: true,
-      message: "File received. Processing embeddings...",
-      filename,
-    });
-
-    await processDocument({
+    const doc = await processDocument({
       buffer,
       mimeType: mimetype,
       filename,
@@ -27,6 +21,13 @@ async function uploadDocument(req, res) {
       size,
       userId: req.user.id,
       workspaceId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "File uploaded and indexed successfully.",
+      filename,
+      document: doc,
     });
 
   } catch (error) {

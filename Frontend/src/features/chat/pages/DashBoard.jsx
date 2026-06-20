@@ -8,21 +8,48 @@ import ChatContainer from "../components/ChatArea/ChatContainer";
 import KnowledgeBasePage from "../../knowledge/components/KnowledgeBasePage";
 import WorkspacePage from "../../workspace/components/WorkspacePage";
 import WorkspaceDetailPage from "../../workspace/components/WorkspaceDetailPage";
+import AgentMarketplacePage from "../../agent/components/AgentMarketplacePage";
+import {
+  joinWorkspaceRoom,
+  leaveWorkspaceRoom,
+  joinChatRoom,
+  leaveChatRoom,
+} from "../services/chat.socket";
 
 const DashBoard = () => {
   const { initializeSocketConnection, handleGetChats } = useChat();
   const { handleGetWorkspaces, selectWorkspace } = useWorkspace();
   const { workspaces, activeWorkspaceId } = useSelector((state) => state.workspace);
+  const { currentChatId } = useSelector((state) => state.chat);
 
   // Controls which page shows in the main panel
-  // "chat" | "knowledge" | "workspace" | "workspace-detail"
+  // "chat" | "knowledge" | "workspace" | "workspace-detail" | "agents"
   const [activeView, setActiveView] = useState("chat");
 
   useEffect(() => {
     initializeSocketConnection();
-    handleGetChats();
+    handleGetChats("all");
     handleGetWorkspaces();
   }, []);
+
+  // Join/leave rooms based on active workspace and chat
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      joinWorkspaceRoom(activeWorkspaceId);
+    }
+    if (currentChatId && currentChatId !== "temp-chat") {
+      joinChatRoom(currentChatId);
+    }
+
+    return () => {
+      if (activeWorkspaceId) {
+        leaveWorkspaceRoom(activeWorkspaceId);
+      }
+      if (currentChatId && currentChatId !== "temp-chat") {
+        leaveChatRoom(currentChatId);
+      }
+    };
+  }, [activeWorkspaceId, currentChatId]);
 
   // Find active workspace for the detail page
   const activeWorkspace = workspaces.find((w) => w._id === activeWorkspaceId);
@@ -36,7 +63,6 @@ const DashBoard = () => {
   // Back from workspace detail to workspace list
   const handleBackToWorkspaceList = () => {
     selectWorkspace(null);
-    handleGetChats(null); // Reload personal chats
     setActiveView("workspace");
   };
 
@@ -63,8 +89,11 @@ const DashBoard = () => {
 
         {/* Main Content Area — switches based on activeView */}
         <div className="flex flex-1 overflow-hidden min-h-0">
-          {activeView === "chat" && <ChatContainer />}
+          {activeView === "chat" && (
+            <ChatContainer onBackToWorkspaceDetail={handleOpenWorkspaceDetail} />
+          )}
           {activeView === "knowledge" && <KnowledgeBasePage />}
+          {activeView === "agents" && <AgentMarketplacePage onNavigate={setActiveView} />}
           {activeView === "workspace" && (
             <WorkspacePage onOpenDetail={handleOpenWorkspaceDetail} />
           )}

@@ -1,13 +1,14 @@
-const express=require("express");
-const cookieParser=require("cookie-parser");
+const express = require("express");
+const cookieParser = require("cookie-parser");
 
-const app=express();
-const authRouter=require("./routes/auth.routes");
-const chatRouter=require("./routes/chat.routes");
-const knowledgeRouter=require("./routes/knowledge.routes");
-const workspaceRouter=require("./routes/workspace.routes");
+const app = express();
+const authRouter = require("./routes/auth.routes");
+const chatRouter = require("./routes/chat.routes");
+const knowledgeRouter = require("./routes/knowledge.routes");
+const workspaceRouter = require("./routes/workspace.routes");
+const agentRouter = require("./routes/agent.routes");
 const morgan = require("morgan");
-const cors=require("cors");
+const cors = require("cors");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -16,13 +17,14 @@ app.use(morgan("dev"));
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
   })
 );
-app.use("/auth",authRouter);
-app.use("/chats",chatRouter);
-app.use("/knowledge",knowledgeRouter);
-app.use("/workspaces",workspaceRouter);
+app.use("/auth", authRouter);
+app.use("/chats", chatRouter);
+app.use("/knowledge", knowledgeRouter);
+app.use("/workspaces", workspaceRouter);
+app.use("/agents", agentRouter);
 
-module.exports=app;
+module.exports = app;

@@ -38,7 +38,9 @@ async function getWorkspaces(req, res) {
   try {
     const workspaces = await Workspace.find({
       "members.user": req.user.id,
-    }).populate("owner", "username email avatar");
+    })
+      .populate("owner", "username email avatar")
+      .populate("members.user", "username email avatar");
 
     res.status(200).json({ workspaces });
   } catch (error) {
@@ -98,7 +100,12 @@ async function updateWorkspace(req, res) {
     if (customInstructions !== undefined) workspace.customInstructions = customInstructions;
 
     await workspace.save();
-    res.status(200).json({ workspace });
+    
+    const populated = await Workspace.findById(workspace._id)
+      .populate("owner", "username email avatar")
+      .populate("members.user", "username email avatar");
+
+    res.status(200).json({ workspace: populated });
   } catch (error) {
     res.status(500).json({ message: "Error updating workspace", error: error.message });
   }
@@ -170,7 +177,11 @@ async function inviteMember(req, res) {
 
     await workspace.save();
 
-    res.status(200).json({ message: "Member invited successfully", workspace });
+    const populated = await Workspace.findById(workspace._id)
+      .populate("owner", "username email avatar")
+      .populate("members.user", "username email avatar");
+
+    res.status(200).json({ message: "Member invited successfully", workspace: populated });
   } catch (error) {
     res.status(500).json({ message: "Error inviting member", error: error.message });
   }
@@ -200,7 +211,12 @@ async function removeMember(req, res) {
     );
 
     await workspace.save();
-    res.status(200).json({ message: "Member removed", workspace });
+    
+    const populated = await Workspace.findById(workspace._id)
+      .populate("owner", "username email avatar")
+      .populate("members.user", "username email avatar");
+
+    res.status(200).json({ message: "Member removed", workspace: populated });
   } catch (error) {
     res.status(500).json({ message: "Error removing member", error: error.message });
   }

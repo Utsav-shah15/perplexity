@@ -7,16 +7,19 @@ import {
   setCurrentChatId,
   setIsError,
   setLoading,
+  setGenerating,
   createNewChat,
   addNewMessage,
   setMessages,
   deleteChatFromState,
 } from "../chat.slice";
+import { setSelectedAgentId } from "../../agent/agent.slice";
 
 export const useChat = () => {
   const dispatch = useDispatch();
   const { currentChatId } = useSelector((state) => state.chat);
   const { activeWorkspaceId } = useSelector((state) => state.workspace);
+  const { selectedAgentId } = useSelector((state) => state.agent);
 
   // Initialize socket and attach Redux dispatch listeners
   const initializeSocket = useCallback(() => {
@@ -47,22 +50,35 @@ export const useChat = () => {
             createdAt: new Date().toISOString(),
           },
         }));
+        dispatch(setCurrentChatId("temp-chat"));
       }
 
       dispatch(setLoading(true));
+      dispatch(setGenerating(true));
 
       const socket = getSocket();
 
       if (socket && socket.connected) {
         // Prefer real-time socket streaming
-        socket.emit("sendMessage", { message, chatId, workspaceId: activeWorkspaceId });
+        socket.emit("sendMessage", { 
+          message, 
+          chatId, 
+          workspaceId: activeWorkspaceId,
+          agentId: selectedAgentId
+        });
       } else {
         // HTTP fallback
-        const data = await sendMessage({ message, chatId });
+        const data = await sendMessage({ 
+          message, 
+          chatId, 
+          workspaceId: activeWorkspaceId,
+          agentId: selectedAgentId
+        });
         const { chat, aimessage, usermessage, title } = data;
 
         if (!chatId) {
-          dispatch(createNewChat({ chatId: chat._id, title }));
+          dispatch(createNewChat({ chatId: chat._id, title, workspace: chat.workspace, agent: chat.agent }));
+          dispatch(setCurrentChatId(chat._id));
           dispatch(addNewMessage({ chatId: chat._id, message: usermessage }));
           dispatch(addNewMessage({ chatId: chat._id, message: aimessage }));
           dispatch(deleteChatFromState("temp-chat"));
@@ -70,7 +86,11 @@ export const useChat = () => {
           dispatch(addNewMessage({ chatId, message: aimessage }));
         }
         dispatch(setLoading(false));
+        dispatch(setGenerating(false));
       }
+
+      // Clear selected agent once message is processed
+      dispatch(setSelectedAgentId(null));
     } catch {
       dispatch(setIsError(true));
       if (!chatId) {
@@ -78,11 +98,11 @@ export const useChat = () => {
         dispatch(setCurrentChatId(null));
       }
       dispatch(setLoading(false));
+      dispatch(setGenerating(false));
     }
-  }, [dispatch, activeWorkspaceId]);
+  }, [dispatch, activeWorkspaceId, selectedAgentId]);
 
   // Fetch all chats for the current user (filtered by workspace)
-  // Accepts optional explicit workspaceId to override Redux state
   const handleGetChats = useCallback(async (explicitWorkspaceId) => {
     try {
       dispatch(setLoading(true));
@@ -94,11 +114,14 @@ export const useChat = () => {
           title: chat.title,
           messages: [],
           lastUpdated: chat.updatedAt,
+          workspace: chat.workspace, // Save workspace object (name, color, icon, etc.)
+          agent: chat.agent, // Save agent details
         };
         return acc;
       }, {});
       dispatch(setChats(normalized));
-    } catch {
+    } catch (err) {
+      console.error("Error fetching chats:", err);
       dispatch(setIsError(true));
     } finally {
       dispatch(setLoading(false));
@@ -134,11 +157,21 @@ export const useChat = () => {
     }
   }, [dispatch, currentChatId]);
 
+  // Stop streaming generation
+  const handleStopGeneration = useCallback((chatId) => {
+    const socket = getSocket();
+    if (socket && socket.connected && chatId) {
+      socket.emit("stopGeneration", { chatId });
+    }
+    dispatch(setGenerating(false));
+  }, [dispatch]);
+
   return {
     initializeSocketConnection: initializeSocket,
     handlechatMessage: handleSendMessage,
     handleGetChats,
     handleGetMessages,
     handleDeleteChat,
+    handleStopGeneration,
   };
 };

@@ -397,6 +397,87 @@ async function getMe(req, res) {
   }
 }
 
+async function googleAuth(req, res) {
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.GOOGLE_CALLBACK_URL)}&response_type=code&scope=profile%20email`;
+    res.redirect(googleAuthUrl);
+}
+
+async function googleCallback(req, res) {
+    const { code } = req.query;
+    if (!code) {
+        return res.redirect("http://localhost:5173/login?error=Google auth failed");
+    }
+
+    try {
+        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: process.env.GOOGLE_CALLBACK_URL,
+                grant_type: "authorization_code",
+            }),
+        });
+
+        const tokens = await tokenResponse.json();
+        if (!tokens.access_token) {
+            return res.redirect("http://localhost:5173/login?error=Failed to retrieve access token");
+        }
+
+        const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
+
+        const userInfo = await userInfoResponse.json();
+        if (!userInfo.email) {
+            return res.redirect("http://localhost:5173/login?error=Failed to retrieve email");
+        }
+
+        let user = await User.findOne({
+            $or: [{ googleId: userInfo.sub }, { email: userInfo.email }],
+        });
+
+        if (!user) {
+            const baseUsername = userInfo.name 
+                ? userInfo.name.replace(/\s+/g, "").toLowerCase() 
+                : userInfo.email.split("@")[0];
+            user = await User.create({
+                username: baseUsername || "googleuser",
+                email: userInfo.email,
+                googleId: userInfo.sub,
+                verified: true
+            });
+        } else {
+            let updated = false;
+            if (!user.googleId) {
+                user.googleId = userInfo.sub;
+                updated = true;
+            }
+            if (!user.verified) {
+                user.verified = true;
+                updated = true;
+            }
+            if (updated) {
+                await user.save();
+            }
+        }
+
+        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+        res.cookie("token", token, {
+            httpOnly: true,
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.redirect("http://localhost:5173/");
+    } catch (error) {
+        console.error("Google OAuth Error:", error);
+        res.redirect("http://localhost:5173/login?error=OAuth Server Error");
+    }
+}
+
 async function logout(req, res) {
   try {
     res.clearCookie("token", {
@@ -421,5 +502,7 @@ module.exports={
     resendVerificationEmail,
     login,
     logout,
-    getMe
+    getMe,
+    googleAuth,
+    googleCallback
 }

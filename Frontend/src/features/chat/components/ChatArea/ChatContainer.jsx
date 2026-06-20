@@ -5,6 +5,7 @@ import {
   Compass,
   Copy,
   Check,
+  ArrowLeft,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -12,8 +13,10 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import ChatInputBar from "./ChatInputBar";
 import { useSelector } from "react-redux";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useChat } from "../../hooks/useChat";
+import { useAgent } from "../../../agent/hooks/useAgent";
+import { useKnowledge } from "../../../knowledge/hooks/useKnowledge";
 import remarkGfm from "remark-gfm";
 
 // ─── Copy Button for Code Blocks ────────────────────────────────────────────
@@ -176,28 +179,100 @@ const markdownComponents = {
   },
 };
 
-export default function ChatContainer() {
-  const { handlechatMessage } = useChat();
-  const { chats, currentChatId, isLoading } = useSelector(
+export default function ChatContainer({ onBackToWorkspaceDetail }) {
+  const { handlechatMessage, handleStopGeneration } = useChat();
+  const { chats, currentChatId, isLoading, isGenerating } = useSelector(
     (state) => state.chat
   );
+  const { activeWorkspaceId, workspaces } = useSelector(
+    (state) => state.workspace
+  );
+  const { user } = useSelector(
+    (state) => state.auth
+  );
+  const { agents, selectedAgentId, selectAgent, handleGetMarketplace } = useAgent();
+  const { 
+    handleUpload, 
+    uploading, 
+    uploadError, 
+    uploadSuccess, 
+    clearFeedback 
+  } = useKnowledge();
+
+  useEffect(() => {
+    if (agents.length === 0) {
+      handleGetMarketplace();
+    }
+  }, [agents, handleGetMarketplace]);
+
   const currentChat = chats[currentChatId];
   const messages = currentChat?.messages || [];
   const messagesContainerRef = useRef(null);
+
+  const activeWorkspace = workspaces.find((w) => w._id === activeWorkspaceId);
+
+  // Deployed agents in this workspace (or all if personal workspace)
+  const availableAgents = useMemo(() => {
+    if (!activeWorkspaceId) {
+      return agents;
+    }
+    if (!activeWorkspace) return [];
+    // Convert deployed agents IDs to strings
+    const deployedIds = (activeWorkspace.deployedAgents || []).map(id => id.toString());
+    return agents.filter(a => a.isSystem || deployedIds.includes(a._id.toString()));
+  }, [agents, activeWorkspace, activeWorkspaceId]);
+  
+  // Resolve current chat's workspace to a full object from the workspaces array
+  let chatWorkspace = currentChat?.workspace;
+  if (chatWorkspace) {
+    const wsId = typeof chatWorkspace === "string" ? chatWorkspace : chatWorkspace._id;
+    chatWorkspace = workspaces.find((w) => w._id === wsId);
+  }
+  
+  const displayWorkspace = chatWorkspace || activeWorkspace;
+
+  const isViewer = useMemo(() => {
+    if (!displayWorkspace) return false;
+    const userId = user?._id || user?.id;
+    const ownerId = displayWorkspace.owner?._id || displayWorkspace.owner;
+    if (ownerId && userId && ownerId.toString() === userId.toString()) {
+      return false;
+    }
+    const memberRecord = displayWorkspace.members?.find(m => {
+      const mId = m.user?._id || m.user;
+      return mId && userId && mId.toString() === userId.toString();
+    });
+    return memberRecord?.role === "viewer";
+  }, [displayWorkspace, user]);
 
   // Show typing dots only when loading but no AI message has started yet
   const lastMsg = messages[messages.length - 1];
   const showLoadingDots = isLoading && (!lastMsg || lastMsg.role === "user");
 
+  const prevChatIdRef = useRef(currentChatId);
+
   // Auto Scroll
   useEffect(() => {
     if (messagesContainerRef.current) {
+      // If we just switched chats, scroll instantly to the bottom
+      if (prevChatIdRef.current !== currentChatId) {
+        prevChatIdRef.current = currentChatId;
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: "auto",
+        });
+        return;
+      }
+
+      // If AI is currently streaming response chunks, scroll instantly to avoid smooth-scroll paint thrashing/fluctuation
+      const isStreaming = lastMsg?.role === "ai";
+      
       messagesContainerRef.current.scrollTo({
         top: messagesContainerRef.current.scrollHeight,
-        behavior: "smooth",
+        behavior: isStreaming ? "auto" : "smooth",
       });
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, currentChatId, lastMsg]);
 
   const handleMessage = async ({ message }) => {
     await handlechatMessage({
@@ -208,6 +283,52 @@ export default function ChatContainer() {
 
   return (
     <div className="flex-1 flex flex-col bg-[#0f0e15] relative overflow-hidden min-h-0">
+
+      {/* Workspace Chat Header */}
+      {displayWorkspace && (
+        <div className="shrink-0 h-14 px-6 flex items-center gap-4 bg-[#14121e] border-b border-[#252233] animate-in slide-in-from-top-1 duration-200">
+          <button 
+            onClick={() => onBackToWorkspaceDetail && onBackToWorkspaceDetail(displayWorkspace._id || displayWorkspace)}
+            className="p-1.5 rounded-lg hover:bg-white/5 text-[#a1a1aa] hover:text-white transition-all cursor-pointer flex items-center justify-center"
+            title={`Back to ${displayWorkspace.name || "Workspace"}`}
+          >
+            <ArrowLeft size={18} />
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <span 
+              className="px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1.5"
+              style={{ 
+                backgroundColor: (displayWorkspace.color || "#9d89ff") + "15",
+                color: displayWorkspace.color || "#9d89ff",
+                border: `1px solid ${(displayWorkspace.color || "#9d89ff")}30`
+              }}
+            >
+              <span>{displayWorkspace.icon || "💼"}</span>
+              <span>{displayWorkspace.name || "Workspace"}</span>
+            </span>
+          </div>
+
+          <div className="h-4 w-[1px] bg-[#252233]"></div>
+
+          <span className="text-sm font-semibold text-[#e4e4e7] truncate max-w-[300px]">
+            {currentChat?.title || "New Chat"}
+          </span>
+          {currentChat?.agent && (
+            <span 
+              className="px-2 py-0.5 rounded text-[11px] font-medium flex items-center gap-1.5 ml-2"
+              style={{
+                backgroundColor: `${currentChat.agent.color || "#3b82f6"}20`,
+                color: currentChat.agent.color || "#3b82f6",
+                border: `1px solid ${currentChat.agent.color || "#3b82f6"}40`
+              }}
+            >
+              <span>{currentChat.agent.icon || "🤖"}</span>
+              <span>{currentChat.agent.name}</span>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* CHAT MODE */}
       {messages.length > 0 ? (
@@ -228,8 +349,16 @@ export default function ChatContainer() {
                   {msg.role === "ai" && (
                     <div className="flex gap-4 max-w-full">
                       {/* Avatar */}
-                      <div className="w-9 h-9 rounded-full bg-[#1d1b28] border border-[#2a2638] flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <span className="text-sm">✨</span>
+                      <div 
+                        className="w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 shadow-lg"
+                        style={{
+                          backgroundColor: currentChat?.agent?.color ? `${currentChat.agent.color}20` : "#1d1b28",
+                          borderColor: currentChat?.agent?.color ? `${currentChat.agent.color}40` : "#2a2638"
+                        }}
+                      >
+                        <span className="text-sm">
+                          {currentChat?.agent?.icon || "✨"}
+                        </span>
                       </div>
                       {/* Message */}
                       <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)]">
@@ -259,8 +388,16 @@ export default function ChatContainer() {
                 <div className="flex justify-start">
                   <div className="flex gap-4 max-w-full">
                     {/* Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-[#1d1b28] border border-[#2a2638] flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <span className="text-sm">✨</span>
+                    <div 
+                      className="w-9 h-9 rounded-full border flex items-center justify-center flex-shrink-0 shadow-lg"
+                      style={{
+                        backgroundColor: currentChat?.agent?.color ? `${currentChat.agent.color}20` : "#1d1b28",
+                        borderColor: currentChat?.agent?.color ? `${currentChat.agent.color}40` : "#2a2638"
+                      }}
+                    >
+                      <span className="text-sm">
+                        {currentChat?.agent?.icon || "✨"}
+                      </span>
                     </div>
                     {/* Dots */}
                     <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)] flex items-center gap-1.5 h-11">
@@ -380,7 +517,21 @@ export default function ChatContainer() {
 
       {/* INPUT */}
       <div className="px-4 max-w-4xl mx-auto w-full pb-6 pt-2">
-        <ChatInputBar onsend={handleMessage} />
+        <ChatInputBar 
+          onsend={handleMessage} 
+          disabled={isViewer} 
+          isGenerating={isGenerating}
+          onStop={() => handleStopGeneration(currentChatId || "temp-chat")}
+          availableAgents={availableAgents}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={selectAgent}
+          showAgentSelector={messages.length === 0}
+          onUploadFile={handleUpload}
+          uploading={uploading}
+          uploadError={uploadError}
+          uploadSuccess={uploadSuccess}
+          onClearFeedback={clearFeedback}
+        />
       </div>
 
     </div>

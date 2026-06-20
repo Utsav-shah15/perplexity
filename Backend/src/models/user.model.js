@@ -18,7 +18,9 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: false,
+      required: function () {
+        return !this.googleId;
+      },
       select: false,
     },
 

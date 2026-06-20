@@ -59,47 +59,72 @@ const agent = createReactAgent({
 });
 
 
-//Build an agent with both internet search + knowledge base tools.
-function createAgentWithKB(userId, workspaceId) {
+// Build a dynamic agent with tools specified by agentConfig (e.g. web_search, knowledge_base).
+function createDynamicAgent(userId, workspaceId, agentConfig = {}) {
+  const tools = [];
+  const enabledTools = agentConfig.tools || ["web_search", "knowledge_base"];
+
+  if (enabledTools.includes("web_search")) {
+    tools.push(searchInternetTool);
+  }
+  if (enabledTools.includes("knowledge_base") && userId) {
+    tools.push(createKnowledgeBaseTool(userId, workspaceId));
+  }
+
   return createReactAgent({
     llm: mistralmodel,
-    tools: [searchInternetTool, createKnowledgeBaseTool(userId, workspaceId)],
+    tools: tools,
   });
 }
 
 // Functions
 
 // non-streaming response
-async function generateResponse(messages, userId = null, workspaceConfig = {}) {
+async function generateResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}) {
   const formatted = messages.map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
-  // Prepend custom workspace instructions if set
+  // Combine agent system prompt and custom workspace instructions
+  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
   if (workspaceConfig.customInstructions) {
-    formatted.unshift(new SystemMessage(workspaceConfig.customInstructions));
+    combinedSystemPrompt += (combinedSystemPrompt ? "\n\n" : "") + `Workspace Guidelines:\n${workspaceConfig.customInstructions}`;
   }
 
-  const activeAgent = userId ? createAgentWithKB(userId, workspaceConfig.workspaceId) : agent;
+  if (combinedSystemPrompt) {
+    formatted.unshift(new SystemMessage(combinedSystemPrompt));
+  }
+
+  const activeAgent = userId
+    ? createDynamicAgent(userId, workspaceConfig.workspaceId, agentConfig)
+    : agent;
+
   const res = await activeAgent.invoke({ messages: formatted });
   const lastMsg = res.messages[res.messages.length - 1];
   return lastMsg.content;
 }
 
 // streaming response
-async function* streamResponse(messages, userId = null, workspaceConfig = {}) {
+async function* streamResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}) {
   const formatted = messages.map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
-  // Prepend custom workspace instructions if set
+  // Combine agent system prompt and custom workspace instructions
+  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
   if (workspaceConfig.customInstructions) {
-    formatted.unshift(new SystemMessage(workspaceConfig.customInstructions));
+    combinedSystemPrompt += (combinedSystemPrompt ? "\n\n" : "") + `Workspace Guidelines:\n${workspaceConfig.customInstructions}`;
   }
 
-  const activeAgent = userId ? createAgentWithKB(userId, workspaceConfig.workspaceId) : agent;
+  if (combinedSystemPrompt) {
+    formatted.unshift(new SystemMessage(combinedSystemPrompt));
+  }
+
+  const activeAgent = userId
+    ? createDynamicAgent(userId, workspaceConfig.workspaceId, agentConfig)
+    : agent;
 
   const eventStream = activeAgent.streamEvents(
     { messages: formatted },

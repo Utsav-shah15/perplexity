@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentChatId } from "../../chat.slice";
+import { setActiveWorkspaceId } from "../../../workspace/workspace.slice";
 
 export default function Sidebar({ activeView, onNavigate, onOpenWorkspaceDetail }) {
   const dispatch = useDispatch();
@@ -24,6 +25,7 @@ export default function Sidebar({ activeView, onNavigate, onOpenWorkspaceDetail 
 
   const handleNewChat = () => {
     dispatch(setCurrentChatId(null));
+    dispatch(setActiveWorkspaceId(null)); // Clear active workspace context for global chats
     onNavigate("chat");
   };
 
@@ -82,10 +84,19 @@ export default function Sidebar({ activeView, onNavigate, onOpenWorkspaceDetail 
             icon={<Home size={18} />}
             label="Home"
             active={activeView === "chat" && !currentChatId}
-            onClick={() => { dispatch(setCurrentChatId(null)); onNavigate("chat"); }}
+            onClick={() => { 
+              dispatch(setCurrentChatId(null)); 
+              dispatch(setActiveWorkspaceId(null)); // Clear active workspace context for home/personal chats
+              onNavigate("chat"); 
+            }}
           />
           <SidebarItem icon={<Compass size={18} />} label="Discover" />
-          <SidebarItem icon={<Bot size={18} />} label="Agents" />
+          <SidebarItem 
+            icon={<Bot size={18} />} 
+            label="Agents" 
+            active={activeView === "agents"}
+            onClick={() => onNavigate("agents")}
+          />
           <SidebarItem icon={<History size={18} />} label="History" />
         </div>
       </div>
@@ -107,6 +118,7 @@ export default function Sidebar({ activeView, onNavigate, onOpenWorkspaceDetail 
                   label={chat.title}
                   active={activeView === "chat" && chat.id === currentChatId}
                   onClick={() => onNavigate("chat")}
+                  workspace={chat.workspace}
                 />
               ))}
           </div>
