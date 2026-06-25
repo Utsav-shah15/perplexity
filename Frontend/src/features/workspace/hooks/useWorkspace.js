@@ -101,6 +101,20 @@ export const useWorkspace = () => {
     [dispatch]
   );
 
+  const handleUpdateMemberRole = useCallback(
+    async (workspaceId, userId, role) => {
+      try {
+        const result = await api.updateMemberRole(workspaceId, userId, role);
+        dispatch(updateWorkspaceInState(result.workspace));
+        return true;
+      } catch {
+        dispatch(setWorkspaceError(true));
+        return false;
+      }
+    },
+    [dispatch]
+  );
+
   const selectWorkspace = useCallback(
     (workspaceId) => {
       dispatch(setActiveWorkspaceId(workspaceId));
@@ -118,6 +132,7 @@ export const useWorkspace = () => {
     handleUpdateWorkspace,
     handleInviteMember,
     handleRemoveMember,
+    handleUpdateMemberRole,
     selectWorkspace,
   };
 };

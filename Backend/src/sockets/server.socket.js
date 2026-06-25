@@ -10,6 +10,16 @@ let io;
 // Tracks currently active AI streams: { chatId -> { content, isActive } }
 const activeStreams = {};
 
+// Online Presence — { workspaceId -> Map<userId, { email, socketId }> }
+const workspacePresence = {};
+
+function broadcastPresence(workspaceId) {
+    if (!io || !workspaceId) return;
+    const members = workspacePresence[workspaceId];
+    const onlineUsers = members ? Array.from(members.values()).map(v => v.email) : [];
+    io.to(`workspace_${workspaceId}`).emit("workspace:presence", { workspaceId, onlineUsers });
+}
+
 function parseCookies(cookieHeader) {
     const list = {};
     if (!cookieHeader) return list;
@@ -31,6 +41,7 @@ function logToFile(message) {
 
 function initSocket(httpServer) {
     io = new Server(httpServer, {
+        maxHttpBufferSize: 1e8, // 100 MB buffer size limit for image uploads
         cors: {
             origin: ["http://localhost:5173", "http://localhost:5174"],
             credentials: true
@@ -68,14 +79,31 @@ function initSocket(httpServer) {
         socket.on("joinWorkspace", (workspaceId) => {
             if (workspaceId) {
                 socket.join(`workspace_${workspaceId}`);
+                // Track which workspace this socket is in for cleanup on disconnect
+                socket._activeWorkspaceId = workspaceId;
                 logToFile(`User ${socket.user?.email} joined workspace room: workspace_${workspaceId}`);
+
+                // Online Presence: add user to presence map
+                if (!workspacePresence[workspaceId]) {
+                    workspacePresence[workspaceId] = new Map();
+                }
+                workspacePresence[workspaceId].set(socket.user.id, { email: socket.user.email, socketId: socket.id });
+                broadcastPresence(workspaceId);
             }
         });
 
         socket.on("leaveWorkspace", (workspaceId) => {
             if (workspaceId) {
                 socket.leave(`workspace_${workspaceId}`);
+                socket._activeWorkspaceId = null;
                 logToFile(`User ${socket.user?.email} left workspace room: workspace_${workspaceId}`);
+
+                // Online Presence: remove user from presence map
+                if (workspacePresence[workspaceId]) {
+                    workspacePresence[workspaceId].delete(socket.user.id);
+                    if (workspacePresence[workspaceId].size === 0) delete workspacePresence[workspaceId];
+                    broadcastPresence(workspaceId);
+                }
             }
         });
 
@@ -113,10 +141,10 @@ function initSocket(httpServer) {
             }
         });
 
-        socket.on("sendMessage", async ({ message, chatId, workspaceId, agentId }) => {
+        socket.on("sendMessage", async ({ message, chatId, workspaceId, agentId, imageBase64, imageMimeType, images }) => {
+            let activeChatId = chatId;
             try {
                 logToFile(`Received sendMessage event. ChatId: ${chatId}, WorkspaceId: ${workspaceId}, AgentId: ${agentId}, Message: "${message}"`);
-                let activeChatId = chatId;
                 let title = null;
                 let chat = null;
 
@@ -185,7 +213,10 @@ function initSocket(httpServer) {
                 const usermessage = await Message.create({
                     chat: activeChatId,
                     role: "user",
-                    content: message
+                    content: message,
+                    imageBase64: imageBase64 || null,
+                    imageMimeType: imageMimeType || null,
+                    images: images || (imageBase64 ? [{ base64: imageBase64, mimeType: imageMimeType }] : [])
                 });
                 logToFile(`Saved user message. ID: ${usermessage._id}`);
 
@@ -197,6 +228,13 @@ function initSocket(httpServer) {
                     // Broadcast chat creation to everyone in the workspace room, or emit to sender if personal
                     if (workspaceId) {
                         io.to(`workspace_${workspaceId}`).emit("chatCreated", { chat: populatedChat, title, usermessage });
+                        // Activity feed: new session created
+                        io.to(`workspace_${workspaceId}`).emit("workspace:activity", {
+                            type: "new_session",
+                            user: socket.user.email,
+                            title: title,
+                            timestamp: new Date().toISOString(),
+                        });
                     } else {
                         socket.emit("chatCreated", { chat: populatedChat, title, usermessage });
                     }
@@ -242,7 +280,12 @@ function initSocket(httpServer) {
                     };
                 }
 
-                const stream = streamResponse(messages, socket.user.id, workspaceConfig, agentConfig);
+                const stream = streamResponse(messages, socket.user.id, workspaceConfig, agentConfig, { 
+                    imageBase64, 
+                    imageMimeType, 
+                    message,
+                    images: images || (imageBase64 ? [{ base64: imageBase64, mimeType: imageMimeType }] : [])
+                });
 
                 logToFile("Starting agent streamEvents loop...");
                 for await (const chunk of stream) {
@@ -317,6 +360,14 @@ function initSocket(httpServer) {
         socket.on("disconnect", () => {
             console.log(`🔴 Socket disconnected: ${socket.id}`);
             logToFile(`Socket disconnected: ${socket.id}`);
+
+            // Clean up online presence on disconnect
+            const wsId = socket._activeWorkspaceId;
+            if (wsId && workspacePresence[wsId]) {
+                workspacePresence[wsId].delete(socket.user.id);
+                if (workspacePresence[wsId].size === 0) delete workspacePresence[wsId];
+                broadcastPresence(wsId);
+            }
         });
     })
 }

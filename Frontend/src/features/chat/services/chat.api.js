@@ -8,8 +8,8 @@ const api = axios.create({
   },
 });
 
-export async function sendMessage({ message, chatId, workspaceId, agentId }) {
-  const response = await api.post("/chats/message", { message, chatId, workspaceId, agentId });
+export async function sendMessage({ message, chatId, workspaceId, agentId, imageBase64, imageMimeType, images }) {
+  const response = await api.post("/chats/message", { message, chatId, workspaceId, agentId, imageBase64, imageMimeType, images });
   return response.data;
 }
 

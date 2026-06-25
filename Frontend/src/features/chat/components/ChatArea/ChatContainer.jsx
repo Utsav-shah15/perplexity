@@ -6,6 +6,10 @@ import {
   Copy,
   Check,
   ArrowLeft,
+  Sparkles,
+  Cpu,
+  Layers,
+  Bot,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -179,6 +183,71 @@ const markdownComponents = {
   },
 };
 
+// ─── Streaming Message Renderer with Smooth Throttled Typewriter ──────────────────
+function StreamingMessageRenderer({ content, isGenerating, isLastMessage }) {
+  const [displayedText, setDisplayedText] = useState(content);
+  const queueRef = useRef(content);
+  const timerRef = useRef(null);
+
+  const shouldAnimate = isLastMessage && isGenerating;
+
+  // Handle active streaming
+  useEffect(() => {
+    if (!shouldAnimate) return;
+
+    queueRef.current = content;
+
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => {
+        setDisplayedText((prev) => {
+          const target = queueRef.current;
+          if (prev.length < target.length) {
+            // Smooth speed regulation: step depends on how far behind we are
+            const diff = target.length - prev.length;
+            const step = diff > 40 ? 6 : diff > 15 ? 3 : 1;
+            return prev + target.slice(prev.length, prev.length + step);
+          } else {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+            return prev;
+          }
+        });
+      }, 20); // 20ms intervals for a highly readable and fluid typing rhythm
+    }
+  }, [content, shouldAnimate]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Sync initial content or immediate updates if not animating
+  useEffect(() => {
+    if (!shouldAnimate) {
+      setDisplayedText(content);
+    } else if (content && !displayedText) {
+      setDisplayedText(content.slice(0, 1));
+    }
+  }, [content, shouldAnimate, displayedText]);
+
+  // Use displayedText if animating, otherwise raw content
+  const textToRender = shouldAnimate ? displayedText : content;
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={markdownComponents}
+    >
+      {textToRender}
+    </ReactMarkdown>
+  );
+}
+
 export default function ChatContainer({ onBackToWorkspaceDetail }) {
   const { handlechatMessage, handleStopGeneration } = useChat();
   const { chats, currentChatId, isLoading, isGenerating } = useSelector(
@@ -274,10 +343,13 @@ export default function ChatContainer({ onBackToWorkspaceDetail }) {
     }
   }, [messages, isLoading, currentChatId, lastMsg]);
 
-  const handleMessage = async ({ message }) => {
+  const handleMessage = async ({ message, imageBase64, imageMimeType, images }) => {
     await handlechatMessage({
       message,
       chatId: currentChatId,
+      imageBase64,
+      imageMimeType,
+      images,
     });
   };
 
@@ -362,22 +434,44 @@ export default function ChatContainer({ onBackToWorkspaceDetail }) {
                       </div>
                       {/* Message */}
                       <div className="bg-[#17151f] border border-[#252233] rounded-2xl px-5 py-4 max-w-[850px] shadow-[0_0_30px_rgba(0,0,0,0.25)]">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={markdownComponents}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                        <StreamingMessageRenderer
+                          content={msg.content}
+                          isGenerating={isGenerating}
+                          isLastMessage={index === messages.length - 1}
+                        />
                       </div>
                     </div>
                   )}
 
                   {/* USER MESSAGE */}
                   {msg.role === "user" && (
-                    <div className="bg-gradient-to-br from-[#9d89ff] to-[#7c67ff] text-white px-5 py-4 rounded-2xl max-w-[700px] text-[15px] leading-7 shadow-[0_0_25px_rgba(157,137,255,0.25)] border border-[#a593ff33]">
-                      <p className="whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
+                    <div className="flex flex-col items-end gap-2 max-w-[700px]">
+                      {msg.imageBase64 && (!msg.images || msg.images.length === 0) && (
+                        <img
+                          src={`data:${msg.imageMimeType || "image/jpeg"};base64,${msg.imageBase64}`}
+                          alt="attached"
+                          className="max-w-[320px] max-h-[240px] rounded-2xl object-contain border border-[#a593ff33] shadow-lg"
+                        />
+                      )}
+                      {msg.images && msg.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 justify-end max-w-[600px]">
+                          {msg.images.map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={`data:${img.mimeType || "image/jpeg"};base64,${img.base64}`}
+                              alt={`attached-${idx}`}
+                              className="max-w-[200px] max-h-[150px] rounded-2xl object-contain border border-[#a593ff33] shadow-lg"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {msg.content && (
+                        <div className="bg-gradient-to-br from-[#9d89ff] to-[#7c67ff] text-white px-5 py-4 rounded-2xl text-[15px] leading-7 shadow-[0_0_25px_rgba(157,137,255,0.25)] border border-[#a593ff33]">
+                          <p className="whitespace-pre-wrap">
+                            {msg.content}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -410,129 +504,70 @@ export default function ChatContainer({ onBackToWorkspaceDetail }) {
               )}
             </div>
           </div>
+
+          {/* INPUT (Bottom) */}
+          <div className="px-4 max-w-4xl mx-auto w-full pb-6 pt-2">
+            <ChatInputBar 
+              onsend={handleMessage} 
+              disabled={isViewer} 
+              isGenerating={isGenerating}
+              onStop={() => handleStopGeneration(currentChatId || "temp-chat")}
+              availableAgents={availableAgents}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={selectAgent}
+              showAgentSelector={false}
+              onUploadFile={handleUpload}
+              uploading={uploading}
+              uploadError={uploadError}
+              uploadSuccess={uploadSuccess}
+              onClearFeedback={clearFeedback}
+            />
+          </div>
         </>
 
       ) : (
 
         /* EMPTY STATE */
-        <div className="flex-1 flex flex-col items-center justify-center px-4 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 overflow-y-auto relative min-h-0 select-none">
+          
+          {/* Floating Glow Blobs */}
+          <div className="absolute top-[20%] left-[30%] w-[200px] h-[200px] rounded-full bg-[#9d89ff]/5 blur-[70px] pointer-events-none"></div>
+          <div className="absolute bottom-[30%] right-[30%] w-[220px] h-[220px] rounded-full bg-[#ffb1d9]/4 blur-[85px] pointer-events-none"></div>
 
-          {/* Hero */}
-          <div className="text-center mb-10 mt-[-2vh]">
+          {/* Center Content Container */}
+          <div className="w-full max-w-3xl flex flex-col items-center gap-6 mt-[-4vh] z-10 px-4">
+            {/* Hero Section */}
+            <div className="text-center">
+              <h1 className="text-[38px] md:text-[46px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#9d89ff] via-[#d4adff] to-[#ffb1d9] tracking-tight drop-shadow-[0_0_20px_rgba(157,137,255,0.1)] font-sans">
+                Aura AI
+              </h1>
+              <p className="text-[#8e8e9c] text-sm md:text-[15px] font-medium mt-1">
+                What can I help you with today?
+              </p>
+            </div>
 
-            <h1 className="text-[52px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#9d89ff] via-[#d4adff] to-[#ffb1d9] mb-4 tracking-tight drop-shadow-[0_0_20px_rgba(157,137,255,0.3)]">
-              Aura AI
-            </h1>
-
-            <p className="text-[#a1a1aa] text-[15px] max-w-lg mx-auto leading-relaxed">
-              Your intelligent workspace for development,
-              research, and creativity.
-            </p>
-
-          </div>
-
-          {/* Suggestions */}
-          <div className="grid grid-cols-2 gap-4 max-w-[700px] w-full mb-10">
-
-            {/* Card */}
-            <button className="bg-[#15131c] hover:bg-[#1a1823] border border-[#252233] p-5 rounded-[18px] text-left transition-all duration-200 group flex flex-col gap-3 h-[110px]">
-
-              <div className="bg-[#242131] w-8 h-8 rounded-lg flex items-center justify-center text-[#d4bfff] group-hover:text-white transition-colors">
-                <Lightbulb size={18} />
-              </div>
-
-              <div>
-                <h3 className="text-[#e4e4e7] text-sm font-semibold mb-0.5">
-                  Explain Concepts
-                </h3>
-
-                <p className="text-[#71717a] text-[13px]">
-                  Break down complex technical topics.
-                </p>
-              </div>
-
-            </button>
-
-            {/* Card */}
-            <button className="bg-[#15131c] hover:bg-[#1a1823] border border-[#252233] p-5 rounded-[18px] text-left transition-all duration-200 group flex flex-col gap-3 h-[110px]">
-
-              <div className="bg-[#242131] w-8 h-8 rounded-lg flex items-center justify-center text-[#d4bfff] group-hover:text-white transition-colors">
-                <PenTool size={18} />
-              </div>
-
-              <div>
-                <h3 className="text-[#e4e4e7] text-sm font-semibold mb-0.5">
-                  Generate UI
-                </h3>
-
-                <p className="text-[#71717a] text-[13px]">
-                  Create high-end interfaces in seconds.
-                </p>
-              </div>
-
-            </button>
-
-            {/* Card */}
-            <button className="bg-[#15131c] hover:bg-[#1a1823] border border-[#252233] p-5 rounded-[18px] text-left transition-all duration-200 group flex flex-col gap-3 h-[110px]">
-
-              <div className="bg-[#242131] w-8 h-8 rounded-lg flex items-center justify-center text-[#d4bfff] group-hover:text-white transition-colors">
-                <Bug size={18} />
-              </div>
-
-              <div>
-                <h3 className="text-[#e4e4e7] text-sm font-semibold mb-0.5">
-                  Debug Code
-                </h3>
-
-                <p className="text-[#71717a] text-[13px]">
-                  Fix issues across any programming language.
-                </p>
-              </div>
-
-            </button>
-
-            {/* Card */}
-            <button className="bg-[#15131c] hover:bg-[#1a1823] border border-[#252233] p-5 rounded-[18px] text-left transition-all duration-200 group flex flex-col gap-3 h-[110px]">
-
-              <div className="bg-[#242131] w-8 h-8 rounded-lg flex items-center justify-center text-[#d4bfff] group-hover:text-white transition-colors">
-                <Compass size={18} />
-              </div>
-
-              <div>
-                <h3 className="text-[#e4e4e7] text-sm font-semibold mb-0.5">
-                  Architecture Review
-                </h3>
-
-                <p className="text-[#71717a] text-[13px]">
-                  Validate system designs and flows.
-                </p>
-              </div>
-
-            </button>
+            {/* Input Bar Centered */}
+            <div className="w-full">
+              <ChatInputBar 
+                onsend={handleMessage} 
+                disabled={isViewer} 
+                isGenerating={isGenerating}
+                onStop={() => handleStopGeneration(currentChatId || "temp-chat")}
+                availableAgents={availableAgents}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={selectAgent}
+                showAgentSelector={true}
+                onUploadFile={handleUpload}
+                uploading={uploading}
+                uploadError={uploadError}
+                uploadSuccess={uploadSuccess}
+                onClearFeedback={clearFeedback}
+              />
+            </div>
 
           </div>
-
         </div>
       )}
-
-      {/* INPUT */}
-      <div className="px-4 max-w-4xl mx-auto w-full pb-6 pt-2">
-        <ChatInputBar 
-          onsend={handleMessage} 
-          disabled={isViewer} 
-          isGenerating={isGenerating}
-          onStop={() => handleStopGeneration(currentChatId || "temp-chat")}
-          availableAgents={availableAgents}
-          selectedAgentId={selectedAgentId}
-          onSelectAgent={selectAgent}
-          showAgentSelector={messages.length === 0}
-          onUploadFile={handleUpload}
-          uploading={uploading}
-          uploadError={uploadError}
-          uploadSuccess={uploadSuccess}
-          onClearFeedback={clearFeedback}
-        />
-      </div>
 
     </div>
   );

@@ -130,7 +130,7 @@ export const initializeSocketConnection = (dispatch) => {
 
             const chatMessages = state.chat.chats[chatId].messages || [];
             const exists = chatMessages.some(m => m._id === usermessage._id || (m.content === usermessage.content && m.role === "user"));
-            
+
             // If the message does not exist (meaning it came from another user), append it
             if (!exists) {
                 dispatch(addNewMessage({ chatId, message: usermessage }));
@@ -199,9 +199,41 @@ export const initializeSocketConnection = (dispatch) => {
             dispatch(setGenerating(false));
         });
 
+        // Real-Time Activity Feed
+        socket.on("workspace:activity", (activity) => {
+            // Dispatch to any registered callback
+            if (socket._onActivity) socket._onActivity(activity);
+        });
+
+        // Online Presence
+        socket.on("workspace:presence", ({ workspaceId, onlineUsers }) => {
+            if (socket._onPresence) socket._onPresence({ workspaceId, onlineUsers });
+        });
+
         socket.on("disconnect", () => {
             console.log("disconnected from Socket.IO server");
         });
     }
     return socket;
+};
+
+// Register/unregister callbacks for activity feed and presence (used by WorkspaceDetailPage)
+export const onWorkspaceActivity = (callback) => {
+    const s = getSocket();
+    if (s) s._onActivity = callback;
+};
+
+export const offWorkspaceActivity = () => {
+    const s = getSocket();
+    if (s) s._onActivity = null;
+};
+
+export const onWorkspacePresence = (callback) => {
+    const s = getSocket();
+    if (s) s._onPresence = callback;
+};
+
+export const offWorkspacePresence = () => {
+    const s = getSocket();
+    if (s) s._onPresence = null;
 };

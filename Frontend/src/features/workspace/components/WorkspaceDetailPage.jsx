@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   Search,
   FileText,
@@ -12,6 +12,10 @@ import {
   Settings2,
   ArrowLeft,
   Upload,
+  Activity,
+  Users,
+  Wifi,
+  ChevronDown,
 } from "lucide-react";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { useSelector, useDispatch } from "react-redux";
@@ -19,6 +23,12 @@ import { useChat } from "../../chat/hooks/useChat";
 import { setCurrentChatId } from "../../chat/chat.slice";
 import { useKnowledge } from "../../knowledge/hooks/useKnowledge";
 import * as workspaceApi from "../services/workspace.api";
+import {
+  onWorkspaceActivity,
+  offWorkspaceActivity,
+  onWorkspacePresence,
+  offWorkspacePresence,
+} from "../../chat/services/chat.socket";
 
 // Helpers
 function formatBytes(bytes) {
@@ -49,7 +59,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
   const { chats } = useSelector((state) => state.chat);
   const { user } = useSelector((state) => state.auth);
   const { handleGetChats, handlechatMessage } = useChat();
-  const { handleUpdateWorkspace, handleInviteMember, handleRemoveMember } = useWorkspace();
+  const { handleUpdateWorkspace, handleInviteMember, handleRemoveMember, handleUpdateMemberRole } = useWorkspace();
   const {
     documents,
     loading: docsLoading,
@@ -71,6 +81,30 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
   const [inviteRole, setInviteRole] = useState("viewer");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState(null);
+
+  // Real-Time Activity Feed
+  const [activities, setActivities] = useState([]);
+
+  // Online Presence
+  const [onlineUsers, setOnlineUsers] = useState([]);
+
+  // Listen for real-time activity events
+  useEffect(() => {
+    const handleActivity = (activity) => {
+      setActivities((prev) => [activity, ...prev].slice(0, 20));
+    };
+    onWorkspaceActivity(handleActivity);
+    return () => offWorkspaceActivity();
+  }, [workspace._id]);
+
+  // Listen for presence updates
+  useEffect(() => {
+    const handlePresence = ({ onlineUsers: users }) => {
+      setOnlineUsers(users || []);
+    };
+    onWorkspacePresence(handlePresence);
+    return () => offWorkspacePresence();
+  }, [workspace._id]);
 
   const handleQuickInvite = async () => {
     if (!inviteEmail.trim()) return;
@@ -121,7 +155,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
     const msg = messageInput;
     setMessageInput("");
     onOpenChat();
-    
+
     // Send message asynchronously in the background
     handlechatMessage({ message: msg, chatId: null });
   };
@@ -180,21 +214,19 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
         <div className="px-8 pt-4 pb-2 flex items-center gap-4">
           <button
             onClick={() => setSessionFilter("all")}
-            className={`text-sm px-3 py-1 rounded-lg transition-colors ${
-              sessionFilter === "all"
-                ? "text-white bg-white/10"
-                : "text-[#71717a] hover:text-white"
-            }`}
+            className={`text-sm px-3 py-1 rounded-lg transition-colors ${sessionFilter === "all"
+              ? "text-white bg-white/10"
+              : "text-[#71717a] hover:text-white"
+              }`}
           >
             All
           </button>
           <button
             onClick={() => setSessionFilter("yours")}
-            className={`text-sm px-3 py-1 rounded-lg transition-colors ${
-              sessionFilter === "yours"
-                ? "text-white bg-white/10"
-                : "text-[#71717a] hover:text-white"
-            }`}
+            className={`text-sm px-3 py-1 rounded-lg transition-colors ${sessionFilter === "yours"
+              ? "text-white bg-white/10"
+              : "text-[#71717a] hover:text-white"
+              }`}
           >
             Your sessions
           </button>
@@ -409,7 +441,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
                 const memberUser = member.user;
                 const memberId = memberUser?._id || memberUser;
                 const isOwner = member.role === "owner";
-                
+
                 // Find if current user is owner of workspace
                 const currentUserId = user?._id || user?.id;
                 const isCurrentWorkspaceOwner = workspace.owner === currentUserId || workspace.owner?._id === currentUserId;
@@ -437,7 +469,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
                         {member.role}
                       </span>
                     </div>
-                    
+
                     {/* Only show delete button if current user is owner and member is not the owner */}
                     {isCurrentWorkspaceOwner && !isOwner && (
                       <button
@@ -459,7 +491,7 @@ export default function WorkspaceDetailPage({ workspace, onBack, onOpenChat }) {
               const isOwner = workspace.owner === currentUserId || workspace.owner?._id === currentUserId;
               const memberRecord = workspace.members?.find(m => (m.user?._id || m.user) === currentUserId);
               const isEditor = memberRecord && (memberRecord.role === "editor" || memberRecord.role === "owner");
-              
+
               if (!isOwner && !isEditor) return null;
 
               return (

@@ -43,6 +43,11 @@ export async function removeMember(workspaceId, userId) {
   return response.data;
 }
 
+export async function updateMemberRole(workspaceId, userId, role) {
+  const response = await api.patch(`/workspaces/${workspaceId}/members/${userId}/role`, { role });
+  return response.data;
+}
+
 export async function getWorkspaceChats(workspaceId) {
   const response = await api.get(`/workspaces/${workspaceId}/chats`);
   return response.data;

@@ -27,15 +27,19 @@ export const useChat = () => {
   }, [dispatch]);
 
   // handle  
-  const handleSendMessage = useCallback(async ({ message, chatId }) => {
+  const handleSendMessage = useCallback(async ({ message, chatId, imageBase64, imageMimeType, images }) => {
     try {
       // Optimistic update — add user message instantly
+      const resolvedImages = images || (imageBase64 ? [{ base64: imageBase64, mimeType: imageMimeType }] : []);
       if (chatId) {
         dispatch(addNewMessage({
           chatId,
           message: {
             role: "user",
             content: message,
+            imageBase64: imageBase64 || null,
+            imageMimeType: imageMimeType || null,
+            images: resolvedImages,
             createdAt: new Date().toISOString(),
           },
         }));
@@ -47,6 +51,9 @@ export const useChat = () => {
           message: {
             role: "user",
             content: message,
+            imageBase64: imageBase64 || null,
+            imageMimeType: imageMimeType || null,
+            images: resolvedImages,
             createdAt: new Date().toISOString(),
           },
         }));
@@ -64,7 +71,10 @@ export const useChat = () => {
           message, 
           chatId, 
           workspaceId: activeWorkspaceId,
-          agentId: selectedAgentId
+          agentId: selectedAgentId,
+          imageBase64: imageBase64 || null,
+          imageMimeType: imageMimeType || null,
+          images: resolvedImages,
         });
       } else {
         // HTTP fallback
@@ -72,7 +82,10 @@ export const useChat = () => {
           message, 
           chatId, 
           workspaceId: activeWorkspaceId,
-          agentId: selectedAgentId
+          agentId: selectedAgentId,
+          imageBase64: imageBase64 || null,
+          imageMimeType: imageMimeType || null,
+          images: resolvedImages,
         });
         const { chat, aimessage, usermessage, title } = data;
 

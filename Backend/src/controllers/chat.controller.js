@@ -6,7 +6,7 @@ const Workspace = require("../models/workspace.model");
 
 async function sendMessage(req, res) {
     try {
-        const { message, workspaceId, agentId } = req.body;
+        const { message, workspaceId, agentId, imageBase64, imageMimeType } = req.body;
         const chatId = req.body.chatId || req.body.chat;
 
         let title = null, chat = null, existingChat = null;
@@ -78,7 +78,10 @@ async function sendMessage(req, res) {
         const usermessage = await Message.create({
             chat: chatId || chat._id,
             role: "user",
-            content: message
+            content: message,
+            imageBase64: imageBase64 || null,
+            imageMimeType: imageMimeType || null,
+            images: req.body.images || (imageBase64 ? [{ base64: imageBase64, mimeType: imageMimeType }] : [])
         });
 
         const messages = await Message.find({ chat: chatId || chat._id });
@@ -104,7 +107,12 @@ async function sendMessage(req, res) {
             };
         }
 
-        const response = await generateResponse(messages, req.user.id, workspaceConfig, agentConfig);
+        const response = await generateResponse(messages, req.user.id, workspaceConfig, agentConfig, { 
+            imageBase64, 
+            imageMimeType, 
+            message,
+            images: req.body.images || (imageBase64 ? [{ base64: imageBase64, mimeType: imageMimeType }] : [])
+        });
 
         const aimessage = await Message.create({
             chat: chatId || chat._id,

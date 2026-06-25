@@ -8,6 +8,7 @@ const {
   deleteWorkspace,
   inviteMember,
   removeMember,
+  updateMemberRole,
   getWorkspaceChats,
 } = require("../controllers/workspace.controller");
 
@@ -23,8 +24,10 @@ workspaceRouter.delete("/:workspaceId", authUser, deleteWorkspace);
 // Members
 workspaceRouter.post("/:workspaceId/invite", authUser, inviteMember);
 workspaceRouter.delete("/:workspaceId/members/:userId", authUser, removeMember);
+workspaceRouter.patch("/:workspaceId/members/:userId/role", authUser, updateMemberRole);
 
 // Workspace Chats
 workspaceRouter.get("/:workspaceId/chats", authUser, getWorkspaceChats);
 
 module.exports = workspaceRouter;
+

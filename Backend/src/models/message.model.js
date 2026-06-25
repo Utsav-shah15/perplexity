@@ -17,6 +17,20 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    imageBase64: {
+      type: String,
+      default: null,
+    },
+    imageMimeType: {
+      type: String,
+      default: null,
+    },
+    images: [
+      {
+        base64: { type: String },
+        mimeType: { type: String }
+      }
+    ],
   },
   {
     timestamps: true,

@@ -10,7 +10,7 @@ const {
 } = require("../controllers/document.controller");
 
 
-router.post("/upload", authUser, upload.single("file"), uploadDocument);
+router.post("/upload", authUser, upload.any(), uploadDocument);
 router.get("/documents", authUser, getDocuments);
 router.delete("/documents/:docId", authUser, deleteDocument);
 router.get("/search", authUser, searchDocuments);

@@ -5,6 +5,7 @@ import { useWorkspace } from "../../workspace/hooks/useWorkspace";
 import Sidebar from "../components/SideBar/SideBar";
 import TopNavigationBar from "../components/TopBar/TopNavigation";
 import ChatContainer from "../components/ChatArea/ChatContainer";
+import HistoryPage from "../components/ChatArea/HistoryPage";
 import KnowledgeBasePage from "../../knowledge/components/KnowledgeBasePage";
 import WorkspacePage from "../../workspace/components/WorkspacePage";
 import WorkspaceDetailPage from "../../workspace/components/WorkspaceDetailPage";
@@ -91,6 +92,9 @@ const DashBoard = () => {
         <div className="flex flex-1 overflow-hidden min-h-0">
           {activeView === "chat" && (
             <ChatContainer onBackToWorkspaceDetail={handleOpenWorkspaceDetail} />
+          )}
+          {activeView === "history" && (
+            <HistoryPage onOpenChat={handleOpenChatFromWorkspace} />
           )}
           {activeView === "knowledge" && <KnowledgeBasePage />}
           {activeView === "agents" && <AgentMarketplacePage onNavigate={setActiveView} />}

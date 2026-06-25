@@ -33,17 +33,20 @@ export function useKnowledge() {
     fetchDocuments();
   }, [fetchDocuments]);
 
-  // Upload a file — scoped to active workspace
-  const handleUpload = useCallback(async (file) => {
-    if (!file) return;
+  // Upload file(s) — scoped to active workspace
+  const handleUpload = useCallback(async (files) => {
+    if (!files || (Array.isArray(files) && files.length === 0)) return;
 
     setUploading(true);
     setUploadError(null);
     setUploadSuccess(null);
 
     try {
-      await uploadDocument(file, activeWorkspaceId);
-      setUploadSuccess(`"${file.name}" uploaded and indexed successfully!`);
+      await uploadDocument(files, activeWorkspaceId);
+      const message = Array.isArray(files)
+        ? `${files.length} document(s) uploaded and indexed successfully!`
+        : `"${files.name}" uploaded and indexed successfully!`;
+      setUploadSuccess(message);
       fetchDocuments();
     } catch (err) {
       setUploadError(err.response?.data?.message || "Upload failed");

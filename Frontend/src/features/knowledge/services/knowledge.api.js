@@ -6,9 +6,15 @@ const api = axios.create({
 });
 
 // Upload a file to the knowledge base (optionally scoped to a workspace)
-export async function uploadDocument(file, workspaceId) {
+export async function uploadDocument(files, workspaceId) {
   const formData = new FormData();
-  formData.append("file", file);
+  if (Array.isArray(files)) {
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+  } else {
+    formData.append("file", files);
+  }
   if (workspaceId) {
     formData.append("workspace", workspaceId);
   }

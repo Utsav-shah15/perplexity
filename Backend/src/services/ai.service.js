@@ -11,7 +11,7 @@ const { searchKnowledgeBase } = require("./rag.service");
 
 // Models
 const geminimodel = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+  model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
   apiKey: process.env.GOOGLE_API_KEY,
 });
 
@@ -80,20 +80,61 @@ function createDynamicAgent(userId, workspaceId, agentConfig = {}) {
 // Functions
 
 // non-streaming response
-async function generateResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}) {
-  const formatted = messages.map((msg) => {
+async function generateResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}, imageContext = {}) {
+  const { imageBase64, imageMimeType, message: latestUserMessage, images } = imageContext;
+  const hasImages = (images && images.length > 0) || (imageBase64 && imageMimeType);
+
+  const formatted = messages.slice(0, hasImages ? -1 : messages.length).map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
+  if (hasImages) {
+    const multimodalContent = [];
+    const imgs = images && images.length > 0 
+      ? images 
+      : [{ base64: imageBase64, mimeType: imageMimeType }];
+
+    imgs.forEach((img) => {
+      if (img.base64 && img.mimeType) {
+        multimodalContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${img.mimeType};base64,${img.base64}`,
+          },
+        });
+      }
+    });
+
+    if (latestUserMessage && latestUserMessage.trim()) {
+      multimodalContent.push({ type: "text", text: latestUserMessage });
+    }
+    formatted.push(new HumanMessage({ content: multimodalContent }));
+  }
+
   // Combine agent system prompt and custom workspace instructions
-  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
+  const defaultPrompt = hasImages 
+    ? "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. Analyze the provided image(s) and answer the user's query about them precisely and efficiently. Maintain a professional, friendly, and structured communication style."
+    : "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
+
+  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || defaultPrompt;
   if (workspaceConfig.customInstructions) {
     combinedSystemPrompt += (combinedSystemPrompt ? "\n\n" : "") + `Workspace Guidelines:\n${workspaceConfig.customInstructions}`;
   }
 
   if (combinedSystemPrompt) {
     formatted.unshift(new SystemMessage(combinedSystemPrompt));
+  }
+
+  if (hasImages) {
+    try {
+      console.log("Multimodal non-streaming payload to Gemini:", JSON.stringify(formatted, null, 2));
+      const res = await geminimodel.invoke(formatted);
+      return res.content;
+    } catch (err) {
+      console.error("CRITICAL ERROR inside Gemini non-streaming call:", err);
+      return `⚠️ **Error from AI Model:** ${err.message || err}`;
+    }
   }
 
   const activeAgent = userId
@@ -106,20 +147,72 @@ async function generateResponse(messages, userId = null, workspaceConfig = {}, a
 }
 
 // streaming response
-async function* streamResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}) {
-  const formatted = messages.map((msg) => {
+async function* streamResponse(messages, userId = null, workspaceConfig = {}, agentConfig = {}, imageContext = {}) {
+  const { imageBase64, imageMimeType, message: latestUserMessage, images } = imageContext;
+  const hasImages = (images && images.length > 0) || (imageBase64 && imageMimeType);
+
+  // Build message history (all but the last user message, which we handle specially if image present)
+  const formatted = messages.slice(0, hasImages ? -1 : messages.length).map((msg) => {
     if (msg.role === "user") return new HumanMessage(msg.content);
     return new AIMessage(msg.content);
   });
 
+  // If images are attached, build a multimodal HumanMessage for Gemini vision
+  if (hasImages) {
+    const multimodalContent = [];
+    const imgs = images && images.length > 0 
+      ? images 
+      : [{ base64: imageBase64, mimeType: imageMimeType }];
+
+    imgs.forEach((img) => {
+      if (img.base64 && img.mimeType) {
+        multimodalContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${img.mimeType};base64,${img.base64}`,
+          },
+        });
+      }
+    });
+
+    if (latestUserMessage && latestUserMessage.trim()) {
+      multimodalContent.push({ type: "text", text: latestUserMessage });
+    }
+    formatted.push(new HumanMessage({ content: multimodalContent }));
+  }
+
   // Combine agent system prompt and custom workspace instructions
-  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
+  const defaultPrompt = hasImages 
+    ? "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. Analyze the provided image(s) and answer the user's query about them precisely and efficiently. Maintain a professional, friendly, and structured communication style."
+    : "You are Aura Assistant, a highly helpful, intelligent, and general-purpose conversational assistant. You have access to Web Search and Knowledge Base tools to help users answer their queries precisely and efficiently. When the user mentions or asks about an uploaded file, document, resume, or photo (e.g. using phrases like 'explain this photo', 'what is this image', 'show my file', etc.), you MUST immediately call the searchKnowledgeBase tool to retrieve its contents or visual descriptions. Do NOT ask the user for clarification before calling the searchKnowledgeBase tool. Maintain a professional, friendly, and structured communication style.";
+
+  let combinedSystemPrompt = (agentConfig && agentConfig.systemPrompt) || defaultPrompt;
   if (workspaceConfig.customInstructions) {
     combinedSystemPrompt += (combinedSystemPrompt ? "\n\n" : "") + `Workspace Guidelines:\n${workspaceConfig.customInstructions}`;
   }
 
   if (combinedSystemPrompt) {
     formatted.unshift(new SystemMessage(combinedSystemPrompt));
+  }
+
+  // Use Gemini directly for image messages (vision-capable), dynamic agent for text-only
+  if (hasImages) {
+    try {
+      console.log("Multimodal formatted messages payload to Gemini:", JSON.stringify(formatted, null, 2));
+      const stream = await geminimodel.stream(formatted);
+      for await (const chunk of stream) {
+        if (chunk.content) {
+          yield { event: "on_chat_model_stream", data: { chunk: { content: chunk.content } } };
+        }
+      }
+    } catch (err) {
+      console.error("CRITICAL ERROR inside Gemini streaming call:", err);
+      yield {
+        event: "on_chat_model_stream",
+        data: { chunk: { content: `\n\n⚠️ **Error from AI Model:** ${err.message || err}` } }
+      };
+    }
+    return;
   }
 
   const activeAgent = userId

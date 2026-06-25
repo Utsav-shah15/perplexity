@@ -2,32 +2,51 @@ const { processDocument, searchKnowledgeBase } = require("../services/rag.servic
 const Document = require("../models/document.model");
 
 
-// POST /knowledge/upload - Upload a file and process it into embeddings
+// POST /knowledge/upload - Upload file(s) and process them into embeddings
 async function uploadDocument(req, res) {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "No file uploaded" });
+    const files = req.files || (req.file ? [req.file] : []);
+    if (files.length === 0) {
+      return res.status(400).json({ success: false, message: "No files uploaded" });
     }
 
-    const { buffer, mimetype, originalname, size } = req.file;
-    const filename = `${Date.now()}-${originalname}`;
+    const processedDocs = [];
     const workspaceId = req.body.workspace || null;
 
-    const doc = await processDocument({
-      buffer,
-      mimeType: mimetype,
-      filename,
-      originalName: originalname,
-      size,
-      userId: req.user.id,
-      workspaceId,
-    });
+    for (const file of files) {
+      const { buffer, mimetype, originalname, size } = file;
+      const filename = `${Date.now()}-${originalname}`;
+
+      const doc = await processDocument({
+        buffer,
+        mimeType: mimetype,
+        filename,
+        originalName: originalname,
+        size,
+        userId: req.user.id,
+        workspaceId,
+      });
+      processedDocs.push(doc);
+
+      // Broadcast activity feed event if upload is scoped to a workspace
+      if (workspaceId) {
+        try {
+          const { getIO } = require("../sockets/server.socket");
+          const io = getIO();
+          io.to(`workspace_${workspaceId}`).emit("workspace:activity", {
+            type: "file_uploaded",
+            user: req.user.email,
+            filename: originalname,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (_) { /* socket not ready */ }
+      }
+    }
 
     res.status(200).json({
       success: true,
-      message: "File uploaded and indexed successfully.",
-      filename,
-      document: doc,
+      message: `${processedDocs.length} file(s) uploaded and indexed successfully.`,
+      documents: processedDocs,
     });
 
   } catch (error) {
